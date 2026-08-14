@@ -13,13 +13,13 @@
       name="text"
       required
       placeholder="输入要做的事…"
-      class="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm focus:border-emerald-400 focus:outline-none" />
+      class="flex-1 rounded-lg border bg-white px-4 py-2 text-sm focus:border-emerald-400 focus:outline-none" />
     <button class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500">
       + 添加
     </button>
   </form>
 
-  <div class="rounded-xl border border-gray-100 bg-gray-50 p-4">
+  <div class="rounded-xl border bg-gray-50 p-4">
     <div class="mb-3 flex items-center justify-between text-xs text-gray-400">
       <span>共 <%= todos.length %> 条</span>
       <!-- htmx 手动刷新列表 -->
