@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= typeof title !== 'undefined' ? title : 'htmx Study' %></title>
+
+  <!-- 生产模式：样式已 build 为独立 style.css；开发模式由 main.js import，Vite 注入 -->
+  <% if (!isDev) { %>
+    <link rel="stylesheet" href="/assets/style.css" />
+  <% } %>
+</head>
+<body class="min-h-screen bg-gray-50 text-gray-900">
+  <header class="bg-white shadow">
+    <div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
+      <h1 class="text-xl font-bold text-emerald-600">htmx + Express Study</h1>
+      <nav class="text-sm text-gray-500">
+        <a href="/" class="hover:text-emerald-600">首页</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-3xl px-4 py-8">
+    <%- body %>
+  </main>
+
+  <footer class="mx-auto max-w-3xl px-4 pb-8 text-center text-xs text-gray-400">
+    © <%= new Date().getFullYear() %> htmx-project · htmx + Express + Vite + UnoCSS
+  </footer>
+
+  <% if (isDev) { %>
+    <script type="module" src="/@vite/client"></script>
+  <% } %>
+  <!-- 前端入口：htmx + 样式；开发模式走 Vite /src，生产模式走 /assets -->
+  <script type="module" src="<%= isDev ? '/src/main.ts' : '/assets/main.js' %>"></script>
+</body>
+</html>
