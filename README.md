@@ -1,6 +1,6 @@
 # htmx-project
 
-前后端不分离小型项目：**Node + Express** 服务端渲染，**htmx** 提供前端交互能力，**Vite + UnoCSS** 负责前端构建与 HMR。
+前后端不分离小型项目：**Node + Express** 服务端渲染，**htmx** 提供前端交互能力，**Vite + Tailwind CSS** 负责前端构建与 HMR。
 
 ## 技术栈选型
 
@@ -9,7 +9,7 @@
 | 后端框架 | Express 5 | 服务端渲染 API，返回完整页面或局部片段 |
 | 模板引擎 | EJS + express-ejs-layouts | 布局 / partial 拆分 |
 | 前端交互 | htmx 2 | 通过 `hx-*` 属性做局部交换 |
-| 样式 | UnoCSS | utility-first，按需生成，产物极轻 |
+| 样式 | Tailwind CSS | utility-first，按需生成，和模板类名兼容 |
 | 构建 / HMR | Vite 8 | **middleware 模式**内嵌进 Express，同源单进程 |
 
 ## 目录结构
@@ -22,10 +22,9 @@ htmx-project/
 │  ├─ routes/         # 路由 / 业务
 │  └─ views/          # EJS 视图（布局 + partials + 页面）
 ├─ src/               # 前端（Vite 打包）
-│  ├─ main.js         # 入口：导入 htmx + 样式
+│  ├─ main.ts         # 入口：导入 htmx + 样式
 │  └─ main.css
 ├─ vite.config.mjs
-├─ uno.config.ts
 ├─ test/              # node:test + supertest
 └─ package.json
 ```
@@ -46,5 +45,5 @@ npm test           # 运行测试
 
 ## HMR 说明
 
-- **前端**：`src/main.js` / `src/main.css` 改动 → Vite HMR 热更新，不刷新。
+- **前端**：`src/main.ts` / `src/main.css` 改动 → Vite HMR 热更新，不刷新。
 - **后端视图**：`server/views/*.ejs` 在开发模式（view cache 关闭）下每次请求重新读盘，保存后刷新页面即可看到变化；路由等 `.js` 改动由 `node --watch` 自动重启。

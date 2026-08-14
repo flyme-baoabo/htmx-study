@@ -1,11 +1,11 @@
 import { defineConfig } from 'vite';
-import UnoCSS from 'unocss/vite';
+import tailwindcss from '@tailwindcss/vite';
 
 // 该项目的角色：为服务端渲染的 Express 应用编译前端资源（htmx 入口、CSS）
 // - dev: 由 Express 通过 middleware 模式挂载，提供 HMR
 // - build: 产出固定命名的 assets，供 EJS 布局直接引用
 export default defineConfig({
-  plugins: [UnoCSS()],
+  plugins: [tailwindcss()],
   appType: 'custom',
   build: {
     outDir: 'dist',
