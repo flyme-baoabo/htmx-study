@@ -1,13 +1,17 @@
 import express from 'express';
+import { loadTodos, saveTodos } from '../storage.js';
 
 const router = express.Router();
 
-// 简单的内存数据存储（demo 用，重启即重置）
-const todos = [
-  { id: 1, text: '学习 htmx', done: true },
-  { id: 2, text: '接入 Vite + Express', done: false },
-];
-let nextId = 3;
+// 启动时从 data/todos.json 读取（服务重启不丢失）
+const loaded = loadTodos();
+const todos = loaded.todos;
+let nextId = loaded.nextId;
+
+// 每次增删改后，把最新内存状态写回磁盘
+function persist() {
+  saveTodos({ todos, nextId });
+}
 
 // 完整页面
 router.get('/', (req, res) => {
@@ -25,6 +29,7 @@ router.post('/todos', (req, res) => {
   const text = (req.body?.text || '').trim();
   if (text) {
     todos.unshift({ id: nextId++, text, done: false });
+    persist();
   }
   res.render('partials/list', { todos, layout: false });
 });
@@ -33,14 +38,20 @@ router.post('/todos', (req, res) => {
 router.post('/todos/:id/toggle', (req, res) => {
   const id = Number(req.params.id);
   const todo = todos.find((t) => t.id === id);
-  if (todo) todo.done = !todo.done;
+  if (todo) {
+    todo.done = !todo.done;
+    persist();
+  }
   res.render('partials/list', { todos, layout: false });
 });
 
 router.delete('/todos/:id', (req, res) => {
   const id = Number(req.params.id);
   const index = todos.findIndex((t) => t.id === id);
-  if (index !== -1) todos.splice(index, 1);   // 原地删除，别重新声明
+  if (index !== -1) {
+    todos.splice(index, 1); // 原地删除
+    persist();
+  }
   res.render('partials/list', { todos, layout: false });
 })
 
