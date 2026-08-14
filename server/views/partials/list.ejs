@@ -1,16 +1,16 @@
 <ul class="space-y-2 p-0" id="todo-list">
   <% if (todos.length === 0) { %>
-    <li class="rounded-lg bg-white p-3 text-center text-sm text-gray-400">暂无待办，添加一条吧 ✨</li>
+    <li class="rounded-lg bg-gray-50 p-6 text-center text-sm text-gray-400">暂无待办，添加一条吧 ✨</li>
   <% } else { %>
     <% todos.forEach((t) => { %>
-      <li class="flex items-center justify-between gap-3 rounded-lg bg-white px-4 py-3 shadow-sm <%= t.done ? 'opacity-60' : '' %>">
+      <li class="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 transition-colors <%= t.done ? 'bg-gray-50/60' : 'hover:border-emerald-200' %>">
         <span class="text-sm <%= t.done ? 'text-gray-400 line-through' : 'text-gray-800' %>"><%= t.text %></span>
         <button
-          class="rounded px-3 py-1 text-xs <%= t.done ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700' %>"
+          class="<%= t.done ? 'btn-soft' : 'btn-primary' %>"
           hx-post="/todos/<%= t.id %>/toggle"
           hx-target="#todo-list"
           hx-swap="outerHTML">
-          <%= t.done ? '撤销' : '完成' %>
+          <%= t.done ? '↩ 撤销' : '✓ 完成' %>
         </button>
       </li>
     <% }) %>

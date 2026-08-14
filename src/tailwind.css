@@ -2,3 +2,49 @@
 
 @source "./**/*.{ts,js,css}";
 @source "../server/views/**/*.ejs";
+
+/* ---- 统一设计 token（一套间距 / 圆角 / 阴影走到底） ---- */
+@theme {
+  --radius-card: 1rem;
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 12px -2px rgb(15 23 42 / 0.06);
+  --shadow-card-hover: 0 2px 4px rgb(15 23 42 / 0.05), 0 8px 20px -4px rgb(15 23 42 / 0.1);
+}
+
+/* ---- 基础组件：统一按钮 / 卡片 / 输入 ---- */
+@layer components {
+  /* 公共按钮基础（无法用 @apply 交叉引用自定义类，故内联到各变体） */
+  .btn,
+  .btn-primary,
+  .btn-soft,
+  .btn-danger,
+  .btn-ghost {
+    @apply inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium select-none;
+  }
+  .btn:active,
+  .btn-primary:active,
+  .btn-soft:active,
+  .btn-danger:active,
+  .btn-ghost:active {
+    @apply scale-[.98];
+  }
+
+  .btn-primary {
+    @apply bg-emerald-600 text-white shadow-sm transition-colors duration-150 hover:bg-emerald-500 active:bg-emerald-700;
+  }
+  .btn-soft {
+    @apply bg-emerald-50 text-emerald-700 transition-colors duration-150 hover:bg-emerald-100 active:bg-emerald-200;
+  }
+  .btn-danger {
+    @apply bg-white text-rose-600 ring-1 ring-rose-200 transition-colors duration-150 hover:bg-rose-50 active:bg-rose-100;
+  }
+  .btn-ghost {
+    @apply text-gray-500 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-800 active:bg-gray-200;
+  }
+
+  .card {
+    @apply rounded-card bg-white shadow-card transition-shadow duration-200 hover:shadow-card-hover;
+  }
+  .input {
+    @apply w-full rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-800 shadow-sm transition-colors placeholder:text-gray-400 focus:border-emerald-400 focus:outline-none;
+  }
+}

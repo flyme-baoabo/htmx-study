@@ -37,4 +37,11 @@ router.post('/todos/:id/toggle', (req, res) => {
   res.render('partials/list', { todos, layout: false });
 });
 
+router.delete('/todos/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const index = todos.findIndex((t) => t.id === id);
+  if (index !== -1) todos.splice(index, 1);   // 原地删除，别重新声明
+  res.render('partials/list', { todos, layout: false });
+})
+
 export { router as homeRouter };

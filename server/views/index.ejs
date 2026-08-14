@@ -1,35 +1,76 @@
-<section class="space-y-6">
-  <h2 class="text-2xl font-semibold text-gray-800">待办清单</h2>
+<%
+  const total = todos.length;
+  const done = todos.filter((t) => t.done).length;
+  const pending = total - done;
+%>
+
+<section class="space-y-8">
+  <!-- Hero -->
+  <div class="space-y-3">
+    <div class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600 ring-1 ring-emerald-200">
+      <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+      htmx + Express + Vite + Tailwind CSS
+    </div>
+    <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">高效办，待办清单</h2>
+    <p class="max-w-xl text-sm leading-relaxed text-gray-500">
+      添加、标记完成——所有更新都通过 <code class="rounded bg-gray-100 px-1.5 py-0.5 text-[12px] text-emerald-700">htmx</code>
+      局部刷新完成，无需整页跳转。加一条试试吧。
+    </p>
+  </div>
+
+  <!-- 概览统计 -->
+  <div id="stats" class="grid grid-cols-3 gap-4">
+    <div class="card p-4">
+      <p class="text-xs text-gray-400">全部</p>
+      <p class="mt-1 text-2xl font-bold text-gray-900"><%= total %></p>
+    </div>
+    <div class="card p-4">
+      <p class="text-xs text-gray-400">已完成</p>
+      <p class="mt-1 text-2xl font-bold text-emerald-600"><%= done %></p>
+    </div>
+    <div class="card p-4">
+      <p class="text-xs text-gray-400">待完成</p>
+      <p class="mt-1 text-2xl font-bold text-amber-500"><%= pending %></p>
+    </div>
+  </div>
 
   <!-- htmx 表单：POST /todos，用返回的局部片段替换 #todo-list -->
-  <form
-    class="flex gap-2"
-    hx-post="/todos"
-    hx-target="#todo-list"
-    hx-swap="outerHTML"
-    hx-on::after-request="if(event.detail.successful) this.reset()">
-    <input
-      type="text"
-      name="text"
-      required
-      placeholder="输入要做的事…"
-      class="flex-1 rounded-lg border bg-white px-4 py-2 text-sm focus:border-emerald-400 focus:outline-none" />
-    <button class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500">
-      + 添加
-    </button>
-  </form>
-
-  <div class="rounded-xl border bg-gray-50 p-4">
-    <div class="mb-3 flex items-center justify-between text-xs text-gray-400">
-      <span>共 <%= todos.length %> 条</span>
+  <div class="card border border-gray-100 p-6">
+    <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900">待办清单</h3>
+        <p class="text-xs text-gray-400">点击“完成”即可切换状态</p>
+      </div>
       <!-- htmx 手动刷新列表 -->
       <button
-        class="hover:text-emerald-600"
+        class="btn-ghost"
         hx-get="/todos"
         hx-target="#todo-list"
-        hx-swap="outerHTML">刷新列表</button>
+        hx-swap="outerHTML">↻ 刷新列表</button>
     </div>
 
-    <%- include('partials/list', { todos }) %>
+    <form
+      class="mb-5 flex flex-col gap-2 sm:flex-row sm:gap-3"
+      hx-post="/todos"
+      hx-target="#todo-list"
+      hx-swap="outerHTML"
+      hx-on::after-request="if(event.detail.successful) this.reset()">
+      <input
+        type="text"
+        name="text"
+        required
+        placeholder="输入要做的事…"
+        class="input sm:flex-1" />
+      <button type="submit" class="btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+        添加
+      </button>
+    </form>
+
+    <div class="rounded-xl border border-gray-100 p-2 sm:p-3">
+      <%- include('partials/list', { todos }) %>
+    </div>
   </div>
 </section>
