@@ -28,8 +28,8 @@ router.get('/todos', (req, res) => {
 router.post('/todos', (req, res) => {
   const text = (req.body?.text || '').trim();
   if (!text) return res.status(400).send('The to-do item cannot be empty!');
-  const newItem = { id: nextId++, text, done: false }
-  todos.unshift({ id: nextId++, text, done: false });
+  const newItem = { id: nextId++, text, done: false };
+  todos.unshift(newItem);
   persist();
   
   if (todos.length === 1) {
@@ -69,6 +69,6 @@ router.delete('/todos/:id', (req, res) => {
     return res.render('partials/list', { todos });
   }
   res.sendStatus(200);
-})
+});
 
 export { router as homeRouter };
