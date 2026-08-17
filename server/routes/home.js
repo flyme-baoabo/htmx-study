@@ -21,7 +21,7 @@ router.get('/', (req, res) => {
 // 局部片段：供 htmx 刷新列表（hx-get /todos -> #todo-list）
 // layout: false —— 明确不套用 layout.ejs，只返回可被 htmx 替换的纯片段
 router.get('/todos', (req, res) => {
-  res.render('partials/list', { todos, layout: false });
+  res.render('partials/list', { todos });
 });
 
 // 添加待办：返回局部片段，htmx 用它替换 #todo-list
@@ -31,7 +31,7 @@ router.post('/todos', (req, res) => {
     todos.unshift({ id: nextId++, text, done: false });
     persist();
   }
-  res.render('partials/list', { todos, layout: false });
+  res.render('partials/list', { todos });
 });
 
 // 切换完成状态：返回局部片段
@@ -42,7 +42,7 @@ router.post('/todos/:id/toggle', (req, res) => {
     todo.done = !todo.done;
     persist();
   }
-  res.render('partials/list', { todos, layout: false });
+  res.render('partials/list', { todos });
 });
 
 router.delete('/todos/:id', (req, res) => {
@@ -52,7 +52,7 @@ router.delete('/todos/:id', (req, res) => {
     todos.splice(index, 1); // 原地删除
     persist();
   }
-  res.render('partials/list', { todos, layout: false });
+  res.render('partials/list', { todos });
 })
 
 export { router as homeRouter };
