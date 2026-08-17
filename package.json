@@ -1,7 +1,7 @@
 {
-  "name": "htmx-project",
+  "name": "htmx-study-vite",
   "version": "1.0.0",
-  "description": "This is my first htmx stdudy project",
+  "description": "This is my first htmx study project",
   "type": "module",
   "main": "server/index.js",
   "scripts": {
