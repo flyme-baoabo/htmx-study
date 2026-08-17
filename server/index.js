@@ -8,7 +8,7 @@ import { mountRoutes } from './routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isProd = process.env.NODE_ENV === 'production';
-const port = Number(process.env.PORT) || 3002;
+const port = Number(process.env.PORT) || 3006;
 
 async function main() {
   const app = createApp();
