@@ -1,6 +1,8 @@
-# htmx-project
+# htmx-study-express-vite
 
 前后端不分离小型项目：**Node + Express** 服务端渲染，**htmx** 提供前端交互能力，**Vite + Tailwind CSS** 负责前端构建与 HMR。
+
+本工程是 **Express + Vite** 的实践项目，完整串起「后端 Express 渲染视图 + 前端 Vite 构建/HMR」的典型开发链路。
 
 ## 技术栈选型
 
@@ -15,7 +17,7 @@
 ## 目录结构
 
 ```
-htmx-project/
+htmx-study-express-vite/
 ├─ server/            # Express 后端（Node）
 │  ├─ index.js        # 入口：加载 Vite middleware / 静态资源
 │  ├─ app.js          # createApp() 封装
