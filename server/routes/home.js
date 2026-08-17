@@ -27,11 +27,18 @@ router.get('/todos', (req, res) => {
 // 添加待办：返回局部片段，htmx 用它替换 #todo-list
 router.post('/todos', (req, res) => {
   const text = (req.body?.text || '').trim();
-  if (text) {
-    todos.unshift({ id: nextId++, text, done: false });
-    persist();
+  if (!text) return res.status(400).send('The to-do item cannot be empty!');
+  const newItem = { id: nextId++, text, done: false }
+  todos.unshift({ id: nextId++, text, done: false });
+  persist();
+  
+  if (todos.length === 1) {
+    // 空→第一条：原来是空列表占位，必须整体替换才能去掉“暂无待办”
+    res.setHeader('HX-Reswap', 'outerHTML'); // 覆盖 hx-swap="afterbegin"
+    return res.render('partials/list', { todos });
   }
-  res.render('partials/list', { todos });
+
+  res.render('partials/item', todos[0]);
 });
 
 // 切换完成状态：返回局部片段
@@ -41,8 +48,10 @@ router.post('/todos/:id/toggle', (req, res) => {
   if (todo) {
     todo.done = !todo.done;
     persist();
+    res.render('partials/item', todo);
+  } else {
+    res.status(404).send('Todo Not Found!'); // 找不到时显式兜底，避免挂起
   }
-  res.render('partials/list', { todos });
 });
 
 router.delete('/todos/:id', (req, res) => {
@@ -52,7 +61,14 @@ router.delete('/todos/:id', (req, res) => {
     todos.splice(index, 1); // 原地删除
     persist();
   }
-  res.render('partials/list', { todos });
+  
+  if (todos.length === 0) {
+    // 删光最后一条：留 `#todo-list` 的空白占位回来
+    res.set('HX-Retarget', '#todo-list'); // 覆盖 closest .todo-item
+    res.setHeader('HX-Reswap', 'outerHTML'); // 覆盖 hx-swap="delete">
+    return res.render('partials/list', { todos });
+  }
+  res.sendStatus(200);
 })
 
 export { router as homeRouter };

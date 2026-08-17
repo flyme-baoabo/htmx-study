@@ -53,12 +53,14 @@
       class="mb-5 flex flex-col gap-2 sm:flex-row sm:gap-3"
       hx-post="/todos"
       hx-target="#todo-list"
-      hx-swap="outerHTML"
+      hx-swap="afterbegin"
       hx-on::after-request="if(event.detail.successful) this.reset()">
       <input
         type="text"
         name="text"
         required
+        oninvalid="this.setCustomValidity('请输入待办内容!!')"
+        oninput="this.setCustomValidity('')"
         placeholder="输入要做的事…"
         class="input sm:flex-1" />
       <button type="submit" class="btn-primary">
