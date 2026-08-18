@@ -81,10 +81,26 @@ nonExplicitSupportedLngs: true,     // 允许“纯语言码”（如 zh / en）
 
 ### 语言切换如何工作
 
-页头导航通过语言下拉菜单切换语言：
+页头导航通过自定义语言下拉菜单（`src/language.ts`）切换语言，**全程无刷新、无页面跳转**：
+
+1. 点击菜单项 → 拦截 `<a>` 默认跳转，SDK 层调用 `switchLanguage(lang)`；
+2. **POST `/change-language`**：服务端把新的 `lang` 写入 cookie，并返回该语言的语言包 `{ i18nJson, isSuccess }`；前端同步更新 `window.I18n`；
+3. **GET `/body`（htmx.ajax）**：利用 htmx 取回当前页面主体片段，以 `innerHTML` 整块换进 `#root`（不重载整页、不重新执行脚本，只替换页面内已翻译的文本）；
+4. 同步 `<html lang>` 属性；
+5. 重新绑定语言下拉菜单（`initLanguageSwitcher()`，因为 `#root` 已是新 DOM）。
+
+### 页内结构约定
+
+得益于 `layout.ejs` 的极简设计，**整站主体（header + main + footer）都放在 `index.ejs`**，并整体包在 `<div id="root">` 中。因此语言切换只需让服务端用对应语言包重渲染 `index.ejs`（`/body` 路由，`layout: false` 不套外层布局），取下整块 `#root` 内容替换即可，无需刷新浏览器。
+
+> 语言包以 `window.I18n` 注入供前端使用；页面正文由 htmx 局部替换，其余脚本（htmx、样式）不重复加载。
+
+### 传统跳转式（备选）
+
+若不需要无感换语言，可退化为 URL query 方式：
 
 - 选择语言后跳转到 `/?lang=...`，语言随 URL 参数请求发送到服务端；
-- 服务端据此确定语言，并写入 `lang` cookie，同时用对应语言包渲染整页。
+- 服务端据此确定语言，并写入 `lang` cookie，同时用对应语言包渲染整页（此方式会整页刷新）。
 
 ### 模板中的用法
 
