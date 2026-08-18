@@ -1,5 +1,6 @@
 import express from 'express';
 import { loadTodos, saveTodos } from '../storage.js';
+import { SUPPORTED_LANGUAGES } from '../app.js';
 
 const router = express.Router();
 
@@ -13,20 +14,30 @@ function persist() {
   saveTodos({ todos, nextId });
 }
 
+// 按语言键加载对应翻译 JSON（返回值直接可作模板变量 / 前端 window.I18n）
+async function loadI18n(lang = 'zh-CN') {
+  const mod = await import(`../locales/${lang}.json`, { with: { type: 'json' } });
+  return mod.default;
+}
+
 // 完整页面
-router.get('/', (req, res) => {
-  res.render('index', { title: 'htmx Study', todos });
+router.get('/', async (req, res) => {
+  const lang = res.locals.currentLocale || 'zh-CN';
+  const i18nJson = await loadI18n(lang);
+  res.render('index', { title: 'htmx Study', todos, i18nJson  });
 });
 
-router.post('/change-language', (req, res) => {
+router.post('/change-language', async (req, res) => {
   const lang = String(req.body?.lang || '');
-  if (lang) {
-    res.cookie('lang', lang, { 
-      httpOnly: false, 
-      path: '/' 
-    })
-  };
-  res.status(204).end();
+  if (!SUPPORTED_LANGUAGES.includes(lang)) {
+    return res.status(400).json({ isSuccess: false, message: `Unsupported language: ${lang}` });
+  }
+  res.cookie('lang', lang, { 
+    httpOnly: false, 
+    path: '/' 
+  })
+  const i18nJson = await loadI18n(lang);
+  res.status(200).json({ i18nJson, isSuccess: true });
 })
 
 router.get('/body', (req, res) => {

@@ -14,6 +14,8 @@ import I18nHttpMiddleware from 'i18next-http-middleware';
 import zhCN from './locales/zh-CN.json' with { type: 'json' };
 import enUS from './locales/en-US.json' with { type: 'json' };
 
+export const SUPPORTED_LANGUAGES = ['zh-CN', 'en-US'];
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
@@ -60,7 +62,7 @@ export async function createApp() {
        *    (顶层键 app/nav/hero/validation/todos/confirm 都在)。任一单独开启都正常。
        *    因此本项目保留 supportedLngs，弃用 nonExplicitSupportedLngs。
        */
-      supportedLngs: ['zh-CN', 'en-US'],
+      supportedLngs: SUPPORTED_LANGUAGES,
       // nonExplicitSupportedLngs: true, // 弃用：勿与 supportedLngs 同时开启，见上方注释
       detection: {
         order: [                              // order：按此优先级依次探测语言来源；排前面的先命中 (先看 URL 参数 ?lang=，再看 lang cookie，最后看 Accept-Language 头)

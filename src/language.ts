@@ -79,10 +79,17 @@ function initLanguageSwitcher(): void {
 
 
 async function switchLanguage(lang: string): Promise<void> {
-    // 1. POST 只设 cookie（不 swap，返回什么都不处理）
+    // 1. POST 设 cookie，并拿回 { i18nJson, isSuccess }
     try {
-        const changeRes = await htmx.ajax('post', '/change-language', { values: { lang }, swap: 'none' });
-        console.log('切换语言成功', changeRes);
+        const res = await fetch('/change-language', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lang }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as { i18nJson?: StringMap; isSuccess?: boolean };
+        // 重新赋值全局文案（供后续直接用，/body 刷新会重绘 DOM 再以此为准）
+        if (data.isSuccess && data.i18nJson) window.I18n = data.i18nJson ;
     } catch (e) {
         console.error('切换语言失败', e);
         return;               // 不继续 GET，避免 旧语言误换
