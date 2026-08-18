@@ -18,6 +18,21 @@ router.get('/', (req, res) => {
   res.render('index', { title: 'htmx Study', todos });
 });
 
+router.post('/change-language', (req, res) => {
+  const lang = String(req.body?.lang || '');
+  if (lang) {
+    res.cookie('lang', lang, { 
+      httpOnly: false, 
+      path: '/' 
+    })
+  };
+  res.status(204).end();
+})
+
+router.get('/body', (req, res) => {
+  res.render('index', { title: 'htmx Study', todos, layout: false });
+})
+
 // 局部片段：供 htmx 刷新列表（hx-get /todos -> #todo-list）
 // layout: false —— 明确不套用 layout.ejs，只返回可被 htmx 替换的纯片段
 router.get('/todos', (req, res) => {
@@ -68,7 +83,7 @@ router.delete('/todos/:id', (req, res) => {
     res.setHeader('HX-Reswap', 'outerHTML'); // 覆盖 hx-swap="delete">
     return res.render('partials/list', { todos });
   }
-  res.sendStatus(200);
+  res.status(200).end();
 });
 
 export { router as homeRouter };

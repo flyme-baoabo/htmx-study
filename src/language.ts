@@ -1,3 +1,5 @@
+import htmx from 'htmx.org';
+
 /**
  * 自定义语言切换下拉菜单。
  * 依赖 + 交互：
@@ -29,8 +31,16 @@ function initLanguageSwitcher(): void {
             arrow.classList.toggle('rotate-180', open);              // 箭头随展开状态旋转
         }
 
-        // 点击某个菜单项：收起面板再交给浏览器执行 <a href> 跳转，避免跳转瞬间面板残留。
-        const handleItemClick = (): void => setOpen(false);
+        // 点击某个菜单项：收起面板，并交给 switchLanguage 做无感语言切换（细节见其实现）。
+
+        const handleItemClick = async (e: MouseEvent): Promise<void> => {
+            e.preventDefault();         // ① 拦掉 <a> 默认整页跳转
+            const lang = (e.currentTarget as HTMLAnchorElement).dataset.lang; // ② 取本次点的语言
+            if (!lang) return;
+            setOpen(false);             // ③ 先收起（和 switchLanguage 顺序无关，可先close再await）
+            await switchLanguage(lang); // ④ 无感刷新
+        };
+
 
         // 点击触发按钮：stopPropagation 防止事件冒泡到 document 而被“外部点击”分支立即关闭。
         trigger.addEventListener('click', (e) => {
@@ -65,6 +75,34 @@ function initLanguageSwitcher(): void {
             items[next].focus(); // 取模实现首尾循环
         });
     });
+}
+
+
+async function switchLanguage(lang: string): Promise<void> {
+    // 1. POST 只设 cookie（不 swap，返回什么都不处理）
+    try {
+        const changeRes = await htmx.ajax('post', '/change-language', { values: { lang }, swap: 'none' });
+        console.log('切换语言成功', changeRes);
+    } catch (e) {
+        console.error('切换语言失败', e);
+        return;               // 不继续 GET，避免 旧语言误换
+    }
+
+    // 2. GET 拿新语言的纯片段，整块换进 #root
+    // await htmx.ajax() 表示「该请求的 DOM swap 已完成」，所以紧跟着的 DOM 操作 / 重绑都可靠；本方案无需额外监听 afterSwap。
+
+    const getBodyRes = await htmx.ajax('get', '/body', {
+        target: '#root',
+        swap: 'innerHTML', // 整个 #root 替换
+    });
+    console.log('获取新语言片段成功', getBodyRes);
+
+
+    // 3. 同步 <html lang>（第 2 步 swap 已完成，现在写 DOM 正确）
+    document.documentElement.lang = lang;
+
+    // 4. #root 已换新 DOM，重新绑定语言菜单
+    initLanguageSwitcher();
 }
 
 initLanguageSwitcher();
