@@ -9,7 +9,8 @@ jobs:
     steps:
       - uses: Yikun/hub-mirror-action@master
         with:
-          src: github/${{ github.repository }}
+          src: github/${{ github.repository_owner }}
           dst: gitee/${{ secrets.GITEE_USER }}/${{ secrets.GITEE_REPO }}
           dst_key: ${{ secrets.GITEE_PRIVATE_KEY }}
           dst_token: ${{ secrets.GITEE_TOKEN }}
+          static_list: ${{ github.event.repository.name }}
