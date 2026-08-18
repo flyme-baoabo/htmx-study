@@ -23,17 +23,42 @@
           <a href="/" class="font-medium text-emerald-600"><%= t('nav.home') %></a>
           <a href="#stats" class="hover:text-emerald-600"><%= t('nav.stats') %></a>
         </nav>
-        <!-- 语言切换下拉：select 变更即跳转到 ?lang= 对应路径 -->
+        <!-- 语言切换下拉：自定义 ul/li 菜单，替代原生 select（样式可控、可高亮） -->
         <div class="relative change-language">
-          <select
+          <button
+            type="button"
             aria-label="<%= t('nav.lang') %>"
-            class="cursor-pointer appearance-none rounded-lg border border-gray-200 bg-white py-1.5 pl-3 pr-8 text-xs font-medium text-gray-600 shadow-sm transition hover:border-emerald-300 hover:text-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
-            onchange="location.href=this.value">
-            <option value="/?lang=zh-CN" <%= currentLocale === 'zh-CN' ? 'selected' : '' %>>中文</option>
-            <option value="/?lang=en-US" <%= currentLocale === 'en-US' ? 'selected' : '' %>>English</option>
-          </select>
-          <!-- 自定义下拉箭头（原生箭头已被 appearance-none 隐藏） -->
-          <span class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-[10px] text-gray-400">▾</span>
+            aria-haspopup="listbox"
+            aria-expanded="false"
+            class="lang-trigger flex w-30 cursor-pointer items-center justify-between gap-2 whitespace-nowrap rounded-lg border border-gray-200 bg-white py-1.5 px-3 text-xs font-medium text-gray-600 shadow-sm transition hover:border-emerald-300 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+            <svg class="h-3.5 w-3.5 text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M10 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14ZM3.6 9a7.36 7.36 0 0 1 2.31-4.1L.71 9.6A7.35 7.35 0 0 0 3.6 9Zm3.6-4.22A6.98 6.98 0 0 1 10 4.22a6.98 6.98 0 0 1 2.8.52L14.33 6.6H5.67l1.53-1.86ZM5.6 4.32A7.36 7.36 0 0 1 7.01 6H3.28a7.33 7.33 0 0 1 2.32-1.69ZM3.6 6h3.6a6.98 6.98 0 0 1-2.16 5.24L3.6 6ZM5.9 12.76a6.98 6.98 0 0 1-.83-2.32l2.56 2.14a7.37 7.37 0 0 1-1.73.18ZM8.6 16a6.98 6.98 0 0 1-1.6-.4l.5-1.5h3.6l.5 1.5a6.98 6.98 0 0 1-1.6.4 7 7 0 0 1-1.4.1Z"/>
+            </svg>
+            <span class="lang-label min-w-6"><%= currentLocale === 'zh-CN' ? '中文' : 'English' %></span>
+            <svg class="lang-arrow h-3 w-3 text-gray-400 transition-transform duration-200" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="m6 8 4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <ul
+            role="listbox"
+            aria-label="<%= t('nav.lang') %>"
+            class="lang-menu absolute right-0 z-30 mt-2 w-32 overflow-hidden rounded-xl border border-gray-200 bg-white p-1 shadow-lg"
+            hidden>
+            <li>
+              <a href="/?lang=zh-CN" data-lang="zh-CN" role="option" aria-selected="<%= currentLocale === 'zh-CN' %>"
+                 class="flex w-full items-center rounded-lg px-2.5 py-2 text-xs font-medium text-gray-600 transition hover:bg-emerald-50 hover:text-emerald-700 <%= currentLocale === 'zh-CN' ? 'bg-emerald-50 text-emerald-700' : '' %>">
+                中文
+                <span class="ml-auto text-emerald-600 <%= currentLocale === 'zh-CN' ? 'opacity-100' : 'opacity-0' %>">✓</span>
+              </a>
+            </li>
+            <li>
+              <a href="/?lang=en-US" data-lang="en-US" role="option" aria-selected="<%= currentLocale === 'en-US' %>"
+                 class="flex w-full items-center rounded-lg px-2.5 py-2 text-xs font-medium text-gray-600 transition hover:bg-emerald-50 hover:text-emerald-700 <%= currentLocale === 'en-US' ? 'bg-emerald-50 text-emerald-700' : '' %>">
+                English
+                <span class="ml-auto text-emerald-600 <%= currentLocale === 'en-US' ? 'opacity-100' : 'opacity-0' %>">✓</span>
+              </a>
+            </li>
+          </ul>
         </div>
       </div>
     </div>
