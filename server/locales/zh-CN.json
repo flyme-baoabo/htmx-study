@@ -1,0 +1,35 @@
+{
+  "app": { "title": "待办清单" },
+  "nav": { "home": "首页", "stats": "概览", "lang": "语言" },
+  "hero": {
+    "title": "高效办，待办清单",
+    "description": "添加、标记完成——所有更新都通过 <code class=\"rounded bg-gray-100 px-1.5 py-0.5 text-[12px] text-emerald-700\">htmx</code> 局部刷新完成，无需整页跳转。加一条试试吧。"
+  },
+  "validation": {
+    "required": "请输入待办内容！"
+  },
+  "todos": {
+    "title": "待办清单",
+    "section_hint": "点击“完成”即可切换状态",
+    "all": "全部",
+    "done": "已完成",
+    "pending": "待完成",
+    "count": "一共 <b>{{count}}</b> 条待办",
+    "empty": "暂无待办，添加一条吧 ✨",
+    "refresh": "刷新列表",
+    "placeholder": "输入要做的事…",
+    "add": "添加"
+  },
+  "confirm": {
+    "undo_title": "撤销确认",
+    "undo_msg": "确定要撤销这条待办吗？",
+    "undo_btn": "撤销",
+    "mark_title": "完成确认",
+    "mark_msg": "确定要将这条待办标记为完成吗？",
+    "mark_btn": "完成",
+    "delete_title": "删除确认",
+    "delete_msg": "删除后无法恢复，确定要删除这条待办吗？",
+    "delete_btn": "删除",
+    "delete_accept": "确认删除"
+  }
+}

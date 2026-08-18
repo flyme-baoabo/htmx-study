@@ -11,25 +11,24 @@
       <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
       htmx + Express + Vite + Tailwind CSS
     </div>
-    <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">高效办，待办清单</h2>
+    <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl"><%= t('hero.title') %></h2>
     <p class="max-w-xl text-sm leading-relaxed text-gray-500">
-      添加、标记完成——所有更新都通过 <code class="rounded bg-gray-100 px-1.5 py-0.5 text-[12px] text-emerald-700">htmx</code>
-      局部刷新完成，无需整页跳转。加一条试试吧。
+      <%- t('hero.description') %>
     </p>
   </div>
 
   <!-- 概览统计 -->
   <div id="stats" class="grid grid-cols-3 gap-4">
     <div class="card p-4">
-      <p class="text-xs text-gray-400">全部</p>
+      <p class="text-xs text-gray-400"><%= t('todos.all') %></p>
       <p class="mt-1 text-2xl font-bold text-gray-900"><%= total %></p>
     </div>
     <div class="card p-4">
-      <p class="text-xs text-gray-400">已完成</p>
+      <p class="text-xs text-gray-400"><%= t('todos.done') %></p>
       <p class="mt-1 text-2xl font-bold text-emerald-600"><%= done %></p>
     </div>
     <div class="card p-4">
-      <p class="text-xs text-gray-400">待完成</p>
+      <p class="text-xs text-gray-400"><%= t('todos.pending') %></p>
       <p class="mt-1 text-2xl font-bold text-amber-500"><%= pending %></p>
     </div>
   </div>
@@ -38,15 +37,16 @@
   <div class="card border border-gray-100 p-6">
     <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h3 class="text-lg font-semibold text-gray-900">待办清单</h3>
-        <p class="text-xs text-gray-400">点击“完成”即可切换状态</p>
+        <h3 class="text-lg font-semibold text-gray-900"><%= t('todos.title') %></h3>
+        <p class="text-xs text-gray-400"><%= t('todos.section_hint') %></p>
+        <p class="text-xs text-gray-400"><%- t('todos.count', { count: total }) %></p>
       </div>
       <!-- htmx 手动刷新列表 -->
       <button
         class="btn-ghost"
         hx-get="/todos"
         hx-target="#todo-list"
-        hx-swap="outerHTML">↻ 刷新列表</button>
+        hx-swap="outerHTML">↻ <%= t('todos.refresh') %></button>
     </div>
 
     <form
@@ -59,15 +59,16 @@
         type="text"
         name="text"
         required
-        oninvalid="this.setCustomValidity('请输入待办内容!!')"
+        data-required="<%= t('validation.required') %>"
+        oninvalid="this.setCustomValidity(this.dataset.requiredMsg)"
         oninput="this.setCustomValidity('')"
-        placeholder="输入要做的事…"
+        placeholder="<%= t('todos.placeholder') %>"
         class="input sm:flex-1" />
       <button type="submit" class="btn-primary">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
         </svg>
-        添加
+        <%= t('todos.add') %>
       </button>
     </form>
 

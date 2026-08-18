@@ -11,7 +11,7 @@ const isProd = process.env.NODE_ENV === 'production';
 const port = Number(process.env.PORT) || 3006;
 
 async function main() {
-  const app = createApp();
+  const app = await createApp();
   const server = http.createServer(app);
 
   if (!isProd) {

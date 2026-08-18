@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="<%= currentLocale %>">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -17,10 +17,25 @@
         <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white">✓</span>
         <span class="tracking-tight text-gray-800">TaskFlow</span>
       </a>
-      <nav class="flex items-center gap-4 text-sm text-gray-500">
-        <a href="/" class="font-medium text-emerald-600">首页</a>
-        <a href="#stats" class="hover:text-emerald-600">概览</a>
-      </nav>
+      <!-- 右侧操作区：导航 + 语言切换，间距 20px(gap-5) -->
+      <div class="flex items-center gap-5">
+        <nav class="flex items-center gap-4 text-sm text-gray-500">
+          <a href="/" class="font-medium text-emerald-600"><%= t('nav.home') %></a>
+          <a href="#stats" class="hover:text-emerald-600"><%= t('nav.stats') %></a>
+        </nav>
+        <!-- 语言切换下拉：select 变更即跳转到 ?lang= 对应路径 -->
+        <div class="relative change-language">
+          <select
+            aria-label="<%= t('nav.lang') %>"
+            class="cursor-pointer appearance-none rounded-lg border border-gray-200 bg-white py-1.5 pl-3 pr-8 text-xs font-medium text-gray-600 shadow-sm transition hover:border-emerald-300 hover:text-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+            onchange="location.href=this.value">
+            <option value="/?lang=zh-CN" <%= currentLocale === 'zh-CN' ? 'selected' : '' %>>中文</option>
+            <option value="/?lang=en-US" <%= currentLocale === 'en-US' ? 'selected' : '' %>>English</option>
+          </select>
+          <!-- 自定义下拉箭头（原生箭头已被 appearance-none 隐藏） -->
+          <span class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-[10px] text-gray-400">▾</span>
+        </div>
+      </div>
     </div>
   </header>
 
