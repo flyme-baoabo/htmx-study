@@ -14,3 +14,4 @@ jobs:
           dst_key: ${{ secrets.GITEE_PRIVATE_KEY }}
           dst_token: ${{ secrets.GITEE_TOKEN }}
           static_list: ${{ github.event.repository.name }}
+          force_update: true   # ←加上这一行！强制覆盖gitee，丢掉gitee侧所有网页操作生成的提交
