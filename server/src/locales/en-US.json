@@ -1,35 +1,41 @@
 {
-  "app": { "title": "To-do List" },
-  "nav": { "home": "Home", "stats": "Overview", "lang": "Language" },
-  "hero": {
-    "title": "Get things done, task by task",
-    "description": "Add, mark complete — every update goes through a <code class=\"rounded bg-gray-100 px-1.5 py-0.5 text-[12px] text-emerald-700\">htmx</code> partial refresh, no full page reload. Try adding one."
-  },
-  "validation": {
-    "required": "Please enter a to-do item!"
-  },
-  "todos": {
-    "title": "Todo list",
-    "section_hint": "Click “Done” to toggle the status",
-    "all": "All",
-    "done": "Completed",
-    "pending": "Pending",
-    "count": "A total of <b>{{count}}</b> todo(s)",
-    "empty": "Nothing here yet, add a task ✨",
-    "refresh": "Refresh",
-    "placeholder": "What needs doing?",
-    "add": "Add"
-  },
-  "confirm": {
-    "undo_title": "Undo confirmation",
-    "undo_msg": "Are you sure you want to undo this to-do?",
-    "undo_btn": "Undo",
-    "mark_title": "Complete confirmation",
-    "mark_msg": "Are you sure you want to mark this to-do as done?",
-    "mark_btn": "Done",
-    "delete_title": "Delete confirmation",
-    "delete_msg": "This cannot be undone. Are you sure you want to delete this to-do?",
-    "delete_btn": "Delete",
-    "delete_accept": "Delete"
-  }
+    "app": {
+        "title": "To-do List"
+    },
+    "nav": {
+        "home": "Home",
+        "stats": "Overview",
+        "lang": "Language"
+    },
+    "hero": {
+        "title": "Get things done, task by task",
+        "description": "Add, mark complete — every update goes through a <code class=\"rounded bg-gray-100 px-1.5 py-0.5 text-[12px] text-emerald-700\">htmx</code> partial refresh, no full page reload. Try adding one."
+    },
+    "validation": {
+        "required": "Please enter a to-do item!"
+    },
+    "todos": {
+        "title": "Todo list",
+        "section_hint": "Click “Done” to toggle the status",
+        "all": "All",
+        "done": "Completed",
+        "pending": "Pending",
+        "count": "A total of <b>{{count}}</b> todo(s)",
+        "empty": "Nothing here yet, add a task ✨",
+        "refresh": "Refresh",
+        "placeholder": "What needs doing?",
+        "add": "Add"
+    },
+    "confirm": {
+        "undo_title": "Undo confirmation",
+        "undo_msg": "Are you sure you want to undo this to-do?",
+        "undo_btn": "Undo",
+        "mark_title": "Complete confirmation",
+        "mark_msg": "Are you sure you want to mark this to-do as done?",
+        "mark_btn": "Done",
+        "delete_title": "Delete confirmation",
+        "delete_msg": "This cannot be undone. Are you sure you want to delete this to-do?",
+        "delete_btn": "Delete",
+        "delete_accept": "Delete"
+    }
 }

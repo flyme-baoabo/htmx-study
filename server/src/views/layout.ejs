@@ -1,28 +1,34 @@
 <!DOCTYPE html>
 <html lang="<%= currentLocale %>">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title><%= typeof title !== 'undefined' ? title : 'htmx Study' %></title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+        <%= typeof title !=='undefined' ? title : 'htmx Study' %>
+    </title>
 
-  <!-- 生产模式：样式已 build 为独立 style.css；开发模式由 main.js import，Vite 注入 -->
-  <% if (!isDev) { %>
-    <link rel="stylesheet" href="/assets/style.css" />
-  <% } %>
+    <!-- 生产模式：样式已 build 为独立 style.css；开发模式由 main.js import，Vite 注入 -->
+    <% if (!isDev) { %>
+        <link rel="stylesheet" href="/assets/style.css" />
+        <% } %>
 </head>
-<body class="flex h-screen flex-col overflow-hidden bg-gray-50 text-gray-900">
-  <!-- 极简根容器：整站主体(header+main+footer)都在 index.ejs；语言切换无感刷新时整块替换 -->
-  <div id="root" hx-swap="innerHTML transition:true" class="flex min-h-0 flex-1 flex-col bg-gray-50 text-gray-900">
-    <%- body %>
-  </div>
 
-  <% if (isDev) { %>
-    <script type="module" src="/@vite/client"></script>
-  <% } %>
-  <!-- 前端入口：htmx + 样式；开发模式走 Vite /client/src，生产模式走 /assets -->
-  <script type="module" src="<%= isDev ? '/client/src/main.ts' : '/assets/main.js' %>"></script>
-  <script>
-    window.I18n = <%- JSON.stringify(i18nJson) %>;
-  </script>
+<body class="flex h-screen flex-col overflow-hidden bg-gray-50 text-gray-900">
+    <!-- 极简根容器：整站主体(header+main+footer)都在 index.ejs；语言切换无感刷新时整块替换 -->
+    <div id="root" hx-swap="innerHTML transition:true" class="flex min-h-0 flex-1 flex-col bg-gray-50 text-gray-900">
+        <%- body %>
+    </div>
+
+    <% if (isDev) { %>
+        <script type="module" src="/@vite/client"></script>
+    <% } %>
+
+    <!-- 前端入口：htmx + 样式；开发模式走 Vite /client/src，生产模式走 /assets -->
+    <script type="module" src="<%= isDev ? '/client/src/main.ts' : '/assets/main.js' %>"></script>
+    <script>
+        window.I18n = <% - JSON.stringify(i18nJson) %>;
+    </script>
 </body>
+
 </html>
