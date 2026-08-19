@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "description": "This is my first htmx study project",
   "type": "module",
-  "main": "server/index.js",
+  "main": "server/src/index.js",
   "scripts": {
-    "dev": "node --watch-path=server --watch-preserve-output server/index.js",
+    "dev": "node --watch-path=server --watch-preserve-output server/src/index.js",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "start": "NODE_ENV=production node server/index.js",
+    "start": "NODE_ENV=production node server/src/index.js",
     "test": "node --test --test-concurrency=1",
     "test:watch": "node --watch --test"
   },

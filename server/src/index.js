@@ -25,7 +25,7 @@ async function main() {
   } else {
     // 生产模式：直接服务构建产物
     app.locals.isDev = false;
-    app.use(express.static(path.join(__dirname, '../dist')));
+    app.use(express.static(path.join(__dirname, '../../dist-client')));
   }
 
   mountRoutes(app);

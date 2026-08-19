@@ -22,14 +22,17 @@
 ```
 htmx-study-express-vite/
 ├─ server/            # Express 后端（Node）
-│  ├─ index.js        # 入口：加载 Vite middleware / 静态资源
-│  ├─ app.js          # createApp() 封装（含 i18next 初始化）
-│  ├─ routes/         # 路由 / 业务
-│  ├─ locales/        # 语言包（zh-CN.json / en-US.json）
-│  └─ views/          # EJS 视图（布局 + partials + 页面）
-├─ src/               # 前端（Vite 打包）
-│  ├─ main.ts         # 入口：导入 htmx + 样式
-│  └─ main.scss
+│  └─ src/
+│     ├─ index.js     # 入口：加载 Vite middleware / 静态资源
+│     ├─ app.js       # createApp() 封装（含 i18next 初始化）
+│     ├─ routes/      # 路由 / 业务
+│     ├─ locales/     # 语言包（zh-CN.json / en-US.json）
+│     └─ views/       # EJS 视图（布局 + partials + 页面）
+├─ client/            # 前端源码
+│  └─ src/
+│     ├─ main.ts      # 入口：导入 htmx + 样式
+│     └─ main.scss
+├─ dist-client/       # Vite 构建产物
 ├─ vite.config.mjs
 ├─ test/              # node:test + supertest
 └─ package.json
@@ -42,8 +45,8 @@ htmx-study-express-vite/
 ```bash
 npm install        # 首次安装依赖
 npm run dev        # 同时启动后端(Express:3000) + 前端(Vite HMR)
-npm run build      # 仅构建前端产物到 dist/
-npm start          # 生产模式：服务 dist 静态资源
+npm run build      # 仅构建前端产物到 dist-client/
+npm start          # 生产模式：服务 dist-client 静态资源
 npm test           # 运行测试
 ```
 
@@ -117,5 +120,5 @@ nonExplicitSupportedLngs: true,     // 允许“纯语言码”（如 zh / en）
 
 ## HMR 说明
 
-- **前端**：`src/main.ts` / `src/main.css` 改动 → Vite HMR 热更新，不刷新。
-- **后端视图**：`server/views/*.ejs` 在开发模式（view cache 关闭）下每次请求重新读盘，保存后刷新页面即可看到变化；路由等 `.js` 改动由 `node --watch` 自动重启。
+- **前端**：`client/src/main.ts` / `client/src/main.css` 改动 → Vite HMR 热更新，不刷新。
+- **后端视图**：`server/src/views/*.ejs` 在开发模式（view cache 关闭）下每次请求重新读盘，保存后刷新页面即可看到变化；路由等 `.js` 改动由 `node --watch` 自动重启。

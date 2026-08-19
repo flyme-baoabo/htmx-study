@@ -19,8 +19,8 @@
   <% if (isDev) { %>
     <script type="module" src="/@vite/client"></script>
   <% } %>
-  <!-- 前端入口：htmx + 样式；开发模式走 Vite /src，生产模式走 /assets -->
-  <script type="module" src="<%= isDev ? '/src/main.ts' : '/assets/main.js' %>"></script>
+  <!-- 前端入口：htmx + 样式；开发模式走 Vite /client/src，生产模式走 /assets -->
+  <script type="module" src="<%= isDev ? '/client/src/main.ts' : '/assets/main.js' %>"></script>
   <script>
     window.I18n = <%- JSON.stringify(i18nJson) %>;
   </script>
