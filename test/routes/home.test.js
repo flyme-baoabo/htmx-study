@@ -12,10 +12,20 @@ const buildApp = async () => {
 };
 
 describe('GET /', () => {
-    it('返回 200 且渲染页面', async () => {
+    it('返回 200 且渲染首页（hero 标题）', async () => {
         const res = await request(await buildApp()).get('/');
         assert.equal(res.status, 200);
-        assert.match(res.text, /待办清单/);
+        assert.match(res.text, /高效办，待办清单/);
+    });
+});
+
+describe('GET /list', () => {
+    it('返回待办清单页（含表单 + #todo-list）', async () => {
+        const res = await request(await buildApp()).get('/list');
+        assert.equal(res.status, 200);
+        assert.match(res.text, /待办清单/);      // todos.title
+        assert.match(res.text, /<form/);          // 新增表单
+        assert.match(res.text, /todo-list/);       // htmx 交换目标
     });
 });
 

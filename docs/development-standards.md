@@ -72,3 +72,57 @@ flowchart LR
 - `.github/workflows/mirror-gitee.yml` —— 正向同步（GitHub → Gitee）
 - `.github/workflows/reverse-gitee-to-github.yml` —— 反向同步（Gitee → GitHub）
 - 本文件：`docs/development-standards.md`
+
+---
+
+## 6. 渲染中间件（render-fragment / render-page）⚡
+
+服务端采用 **express-ejs-layouts + 两层自定义中间件** 完成页面组装。两条铁律：**挂载顺序不能错**、**业务路由统一走 `res.renderPage`**。
+
+### 6.1 职责分工
+
+| 中间件 | 文件 | 职责 |
+|---|---|---|
+| `fragmentRenderMiddleware` | `server/src/middleware/render-fragment.js` | 重写 `res.render`：`partials/` 开头 → 走 `res.__render`（原点渲染，绕开布局）；其余 → 交给 express-ejs-layouts 包装后的 `layoutRender` |
+| `renderPageMiddleware` | `server/src/middleware/render-page.js` | 在 `res` 上挂载 `res.renderPage(view, options)`，一次性完成「内容 + app-layout 外壳」两层嵌套 |
+
+### 6.2 挂载顺序（不可颠倒）
+
+```js
+app.use(fragmentRender);  // 必须先挂：renderPage 内部的 res.render 要经过本包装分发
+app.use(renderPage);      // 后挂
+```
+
+`renderPage` 内部调用的 `res.render` **就是** fragment 挂载过的那一份同一个函数在做分发，只是视图名不同走不同分支。顺序反了会导致互相覆盖、局部片段被错误套壳。
+
+### 6.3 `res.renderPage` 的两层嵌套
+
+| 场景 | 内容 -> | 外壳 -> | 外层布局 |
+|---|---|---|---|
+| 整页（`pageLayout=true` / `layout='布局名'`） | 内容视图（`index` / `listPage`…） | `app-layout.ejs`（注入 `outletContent`） | 套 `layout.ejs`（布局名） |
+| 片段（`pageLayout=false`，供 htmx `/body` 整块替换 `#root`） | 内容视图 | `app-layout.ejs` | 不套（`layout:false`） |
+
+`layout` 选项：默认由 `pageLayout` 推导（`true→'layout'`，`false→false`）；也可显式传布局名或 `layout:false`。
+
+- **第一层渲染**（内容视图）传回调拿字符串，因为它要注入 `outletContent` —— 第②层没有取字符串需求，故**不传回调**，交由 Express 自动 `send` + 自动 `next(err)`。
+- `renderPage` 里第一层已用 `new Promise` 包成 `await` 并 `catch`；第二层的错误由 Express 自动进入错误链。
+- **新增页面**：只要加一个内容视图（如 `listPage.ejs`），无需改中间件。
+- **业务路由禁止手写 `layout:false` / 手动套壳** —— 一律用 `res.renderPage`。
+
+### 6.5 用哪个渲染 API（`renderPage` vs `res.render`）⚡
+
+**核心判据：返回的响应里要不要带 app-layout 外壳（header + `#outlet` + footer）。**
+
+| 场景 | 用 | 为什么 |
+|---|---|---|
+| 整页（首屏 / 整页导航，如 `pages.js`） | `res.renderPage(meta.view, {...})` | 需要完整页面 = 内容 + app-layout + layout |
+| 语言切换 `/body`（`locale.js`） | `res.renderPage(..., { pageLayout:false })` | 前端要整块替换 `#root`，而 `#root` 内正是「app-layout 外壳 + 内容」——**需要带壳**，但不要 `layout`（`<html>/<head>/<body>` 那层） |
+| 局部片段（待办增删改，`partials/item`、`partials/list`） | `res.render('partials/…', ...)` | 只要一个列表元素，不沾外壳；fragment 会**自动绕开布局** |
+
+**例外的直觉纠偏 —— 为什么 `/body` 是 `renderPage` 而不是 `res.render`？**
+
+不是因为「它是语言切换」，而是因为它要替换整个 `#root`，而 `#root` 里装的正是 `app-layout` 外壳（header + `#outlet` + footer）。若用 `res.render('index', {layout:false})` 只会得到纯内容，替换后 header/footer 都会消失。所以它必须走 `renderPage` 组装出「内容 + app-layout 外壳」，再靠 `pageLayout:false` 切掉最外层 `layout`。语言切换只是触发时机，不是用 `renderPage` 的根因。
+
+**一句话记法：**
+- 要 **app-layout 外壳**（整页或带壳重绘）→ `renderPage`
+- 只要 **局部列表元素** → `res.render('partials/…')`

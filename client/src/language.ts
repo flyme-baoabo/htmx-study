@@ -9,15 +9,24 @@ import htmx from 'htmx.org';
  *  - 键盘方向键可切换高亮项（可选增强）
  */
 const CONTAINER_SELECTOR = '.change-language';
+// 每个容器只绑定一次：防止 initLanguageSwitcher 被重复调用时重复 addEventListener 造成事件叠加。
+const INITIALIZED = new WeakSet<HTMLElement>();
+// WeakSet 没有 size / 迭代器，无法直接查长度，故用一个计数器统计「真正登记过的容器总数」。
+// 注意：这是历史累计值（旧容器被 swap 移除后会 GC，但计数不回退），只看增长趋势，不代表内存占用。
 
 function initLanguageSwitcher(): void {
     document.querySelectorAll<HTMLElement>(CONTAINER_SELECTOR).forEach((container) => {
+        if (INITIALIZED.has(container)) return; // 已在首次绑定过的容器，跳过（避免重复绑定）
+
         const trigger = container.querySelector<HTMLButtonElement>('.lang-trigger')!;
         const menu = container.querySelector<HTMLUListElement>('.lang-menu')!;
         const arrow = container.querySelector<SVGSVGElement>('.lang-arrow')!;
 
         // 元素缺失说明模板结构不完整，直接跳过（对当前容器不做任何绑定）。
         if (!trigger || !menu) return;
+
+        // 元素齐全，正式绑定并登记，避免再次被 init 重复处理。
+        INITIALIZED.add(container);
 
         // 让菜单宽度与触发器一致：直接读取触发器的渲染宽度再赋给第一个菜单。
         // 用匹配的 offsetWidth 更可靠，因为按钮有 padding/inner 结构，仅 ui 类 w-32 会漂移。
@@ -95,10 +104,11 @@ async function switchLanguage(lang: string): Promise<void> {
         return;               // 不继续 GET，避免 旧语言误换
     }
 
-    // 2. GET 拿新语言的纯片段，整块换进 #root
-    // await htmx.ajax() 表示「该请求的 DOM swap 已完成」，所以紧跟着的 DOM 操作 / 重绑都可靠；本方案无需额外监听 afterSwap。
-
-    const getBodyRes = await htmx.ajax('get', '/body', {
+    // 2. GET /body 拿新语言的纯片段（app-layout 层），整块换进 #root。
+    //    带当前 path，让服务端按当前路由重绘对应页面内容（多页面支持）。
+    //    await htmx.ajax() 表示「该请求的 DOM swap 已完成」，所以紧跟着的 DOM 操作 / 重绑都可靠；本方案无需额外监听 afterSwap。
+    const path = encodeURIComponent(location.pathname);
+    const getBodyRes = await htmx.ajax('get', `/body?path=${path}`, {
         target: '#root',
         swap: 'innerHTML', // 整个 #root 替换
     });
@@ -112,4 +122,12 @@ async function switchLanguage(lang: string): Promise<void> {
     initLanguageSwitcher();
 }
 
+// 首次加载：绑定语言菜单。
 initLanguageSwitcher();
+
+// 页面级路由跳转（hx-boost 会用 AJAX 替换整个 body，原先挂在 #root 内的语言菜单会被换成新 DOM）。
+// 监听 htmx:afterSwap（任何 swap 完成后触发，含 boost 的 body 替换），对新 DOM 重新绑定。
+// 由于每个容器用 INITIALIZED 守卫防重，重复触发这里的 init 是安全的（已绑的容器会被跳过）。
+document.body.addEventListener('htmx:afterSwap', () => {
+    initLanguageSwitcher();
+});

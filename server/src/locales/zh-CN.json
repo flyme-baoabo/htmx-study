@@ -4,12 +4,18 @@
     },
     "nav": {
         "home": "首页",
+        "list": "待办清单",
         "stats": "概览",
         "lang": "语言"
     },
     "hero": {
         "title": "高效办，待办清单",
         "description": "添加、标记完成——所有更新都通过 <code class=\"rounded bg-gray-100 px-1.5 py-0.5 text-[12px] text-emerald-700\">htmx</code> 局部刷新完成，无需整页跳转。加一条试试吧。"
+    },
+    "home": {
+        "cta_title": "管理你的待办",
+        "cta_body": "添加、标记完成、删除——集中在 /list 页一次搞定，全程 htmx 局部刷新。",
+        "cta_action": "前往待办清单 →"
     },
     "validation": {
         "required": "请输入待办内容！"
