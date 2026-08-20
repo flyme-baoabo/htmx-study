@@ -6,24 +6,24 @@ type RenderOptions = Record<string, string | number | boolean | object | null | 
 // 模块扩展：给express req/res补充类型
 // ------------------------------
 declare global {
-  namespace Express {
-    interface Request {
-      /** 是否存在 hx‑request 请求头（原始header状态） */
-      isHXRequest: boolean;
-      /** 是否存在 hx‑history‑restore‑request 请求头（原始header状态） */
-      isHistoryRestore: boolean;
-      /** 衍生标记：有效的htmx片段请求，排除历史恢复回退场景 */
-      isFragment: boolean;
-    }
+    namespace Express {
+        interface Request {
+            /** 是否存在 hx‑request 请求头（原始header状态） */
+            isHXRequest: boolean;
+            /** 是否存在 hx‑history‑restore‑request 请求头（原始header状态） */
+            isHistoryRestore: boolean;
+            /** 衍生标记：有效的htmx片段请求，排除历史恢复回退场景 */
+            isFragment: boolean;
+        }
 
-    interface Response {
-      /**
-       * 判断本次渲染是否应当输出片段（关闭layout）
-       * @param viewName 待渲染模板名称
-       */
-      isFragmentRequest(viewName: string): boolean;
+        interface Response {
+            /**
+             * 判断本次渲染是否应当输出片段（关闭layout）
+             * @param viewName 待渲染模板名称
+             */
+            isFragmentRequest(viewName: string): boolean;
+        }
     }
-  }
 }
 
 /**
@@ -31,27 +31,27 @@ declare global {
  * 分别独立判断：优先读取req已挂载属性；不存在则解析http header兜底
  */
 function getHtmxRequestFlags(req: Request): {
-  isHXRequest: boolean;
-  isHistoryRestore: boolean;
+    isHXRequest: boolean;
+    isHistoryRestore: boolean;
 } {
-  let isHXRequest: boolean;
-  if (req.isHXRequest !== undefined) {
-    isHXRequest = req.isHXRequest;
-  } else {
-    isHXRequest = !!req.headers['hx-request'];
-  }
+    let isHXRequest: boolean;
+    if (req.isHXRequest !== undefined) {
+        isHXRequest = req.isHXRequest;
+    } else {
+        isHXRequest = !!req.headers['hx-request'];
+    }
 
-  let isHistoryRestore: boolean;
-  if (req.isHistoryRestore !== undefined) {
-    isHistoryRestore = req.isHistoryRestore;
-  } else {
-    isHistoryRestore = !!req.headers['hx-history-restore-request'];
-  }
+    let isHistoryRestore: boolean;
+    if (req.isHistoryRestore !== undefined) {
+        isHistoryRestore = req.isHistoryRestore;
+    } else {
+        isHistoryRestore = !!req.headers['hx-history-restore-request'];
+    }
 
-  return {
-    isHXRequest,
-    isHistoryRestore,
-  };
+    return {
+        isHXRequest,
+        isHistoryRestore,
+    };
 }
 
 /**
@@ -61,14 +61,14 @@ function getHtmxRequestFlags(req: Request): {
  * 2. htmx请求 或者 模板以partials/开头 → true，输出片段
  */
 function calcIsFragmentRequest(req: Request, viewName: string): boolean {
-  const { isHXRequest, isHistoryRestore } = getHtmxRequestFlags(req);
+    const { isHXRequest, isHistoryRestore } = getHtmxRequestFlags(req);
 
-  if (isHistoryRestore) {
-    return false;
-  }
+    if (isHistoryRestore) {
+        return false;
+    }
 
-  const isPartialView = viewName.startsWith('partials/');
-  return isHXRequest || isPartialView;
+    const isPartialView = viewName.startsWith('partials/');
+    return isHXRequest || isPartialView;
 }
 
 /**
@@ -76,22 +76,22 @@ function calcIsFragmentRequest(req: Request, viewName: string): boolean {
  * app.use(injectFragmentFlagMiddleware)
  */
 export function injectFragmentFlagMiddleware(
-  req: Request,
-  res: Response,
-  next: NextFunction
+    req: Request,
+    res: Response,
+    next: NextFunction
 ): void {
-  const { isHXRequest, isHistoryRestore } = getHtmxRequestFlags(req);
+    const { isHXRequest, isHistoryRestore } = getHtmxRequestFlags(req);
 
-  req.isHXRequest = isHXRequest;
-  req.isHistoryRestore = isHistoryRestore;
-  req.isFragment = req.isHXRequest && !req.isHistoryRestore;
+    req.isHXRequest = isHXRequest;
+    req.isHistoryRestore = isHistoryRestore;
+    req.isFragment = req.isHXRequest && !req.isHistoryRestore;
 
-  // 闭包捕获当前req，挂载到res
-  res.isFragmentRequest = (viewName: string): boolean => {
-    return calcIsFragmentRequest(req, viewName);
-  };
+    // 闭包捕获当前req，挂载到res
+    res.isFragmentRequest = (viewName: string): boolean => {
+        return calcIsFragmentRequest(req, viewName);
+    };
 
-  next();
+    next();
 }
 
 /**
@@ -99,47 +99,47 @@ export function injectFragmentFlagMiddleware(
  * app.use(fragmentRenderMiddleware)
  */
 export function fragmentRenderMiddleware(
-  req: Request,
-  res: Response,
-  next: NextFunction
+    req: Request,
+    res: Response,
+    next: NextFunction
 ): void {
-  const originalRender = res.render;
+    const originalRender = res.render;
 
-  res.render = function (
-    this: Response,
-    view: string,
-    options?: RenderOptions | ((err: Error, html: string) => void),
-    callback?: (err: Error, html: string) => void
-  ): void {
-    // 点击call重载解析的坑：用 bind 提前把 this 固定成 res，
-    // 得到的签名仍是 Express 的 (view, options?, callback?)，参数类型检查保留
-    const nativeRender = originalRender.bind(res);
+    res.render = function (
+        this: Response,
+        view: string,
+        options?: RenderOptions | ((err: Error, html: string) => void),
+        callback?: (err: Error, html: string) => void
+    ): void {
+        // 点击call重载解析的坑：用 bind 提前把 this 固定成 res，
+        // 得到的签名仍是 Express 的 (view, options?, callback?)，参数类型检查保留
+        const nativeRender = originalRender.bind(res);
 
-    let locals: RenderOptions | undefined;
-    let cb: ((err: Error, html: string) => void) | undefined;
+        let locals: RenderOptions | undefined;
+        let cb: ((err: Error, html: string) => void) | undefined;
 
-    // 处理express render多态参数
-    if (typeof options === 'function') {
-      cb = options;
-      locals = undefined;
-    } else {
-      locals = options;
-      cb = callback;
-    }
+        // 处理express render多态参数
+        if (typeof options === 'function') {
+            cb = options;
+            locals = undefined;
+        } else {
+            locals = options;
+            cb = callback;
+        }
 
-    const needFragment = this.isFragmentRequest(view);
-    const finalLocals = locals ?? {};
+        const needFragment = this.isFragmentRequest(view);
+        const finalLocals = locals ?? {};
 
-    // 用户没有手动设置layout时，自动关闭layout
-    if (needFragment && finalLocals.layout === undefined) {
-      Object.assign(finalLocals, { layout: false });
-    }
+        // 用户没有手动设置layout时，自动关闭layout
+        if (needFragment && finalLocals.layout === undefined) {
+            Object.assign(finalLocals, { layout: false });
+        }
 
-    // 交给 express 处理响应；bind 后 this 已固定为 res
-    nativeRender(view, finalLocals, cb);
-  };
+        // 交给 express 处理响应；bind 后 this 已固定为 res
+        nativeRender(view, finalLocals, cb);
+    };
 
-  next();
+    next();
 }
 
 /**
@@ -147,13 +147,13 @@ export function fragmentRenderMiddleware(
  * app.use('/partials/*', protectPartialsRoute)
  */
 export function protectPartialsRoute(
-  req: Request,
-  res: Response,
-  next: NextFunction
+    req: Request,
+    res: Response,
+    next: NextFunction
 ): void {
-  if (!req.isHXRequest) {
-    res.status(403).send('Partial endpoint only allow htmx request');
-    return;
-  }
-  next();
+    if (!req.isHXRequest) {
+        res.status(403).send('Partial endpoint only allow htmx request');
+        return;
+    }
+    next();
 }
