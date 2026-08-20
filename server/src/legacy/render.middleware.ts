@@ -26,6 +26,7 @@ export interface RenderPageOptions {
     // 兼容旧接口参数
     /** 兼容老参数：单中间壳模板名 */
     pageShell?: string;
+    pageShellSlot?: string;
     /** 兼容老参数：是否开启外层layout，优先级低于 useOuterEjsLayout */
     pageLayout?: boolean;
 
@@ -76,7 +77,8 @@ export default function renderPageMiddleware(req: Request, res: Response, next: 
         const {
             layouts = [],
             useOuterEjsLayout,
-            pageShell,
+            pageShell = 'layouts/app-layout',
+            pageShellSlot = 'outletContent',
             pageLayout,
             ...pageOptions
         } = options;
@@ -84,8 +86,8 @@ export default function renderPageMiddleware(req: Request, res: Response, next: 
         let stack: LayoutLayer[] = [...layouts];
 
         // 兼容旧调用：不传layouts，使用 pageShell
-        if (!Array.isArray(layouts) && pageShell) {
-            stack = [{ tplName: pageShell, slotKey: 'outletContent' }];
+        if (!Array.isArray(layouts) && pageShell && pageShellSlot) {
+            stack = [{ tplName: pageShell, slotKey: pageShellSlot }];
         }
 
         // 优先级：useOuterEjsLayout > pageLayout > 默认true
