@@ -46,9 +46,9 @@ export async function createApp(): Promise<Express> {
     // ⚠️ 顺序不能乱：inject -> fragmentRender -> protectPartials
     app.use(injectFragmentFlagMiddleware);
     app.use(fragmentRenderMiddleware);
-    app.use('/partials/*', protectPartialsRoute);
+    app.use('/partials/{*splat}', protectPartialsRoute);
     // 页面组装渲染器（res.renderPage）：整页 / 片段 由 render.middleware 内部完成
     app.use(renderPageMiddleware);
-
+    
     return app;
 }

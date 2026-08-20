@@ -8,10 +8,17 @@
         <%= typeof title !=='undefined' ? title : 'htmx Study' %>
     </title>
 
-    <!-- 生产模式：样式已 build 为独立 style.css；开发模式由 main.js import，Vite 注入 -->
-    <% if (!isDev) { %>
+    <!--
+        样式链接：放在 <head> 顶部、可阻塞渲染，避免首屏 FOUC（无样式闪白）。
+        生产模式：build 汇集成独立 style.css；开发模式：直接引 Vite 中间件转换后的源 CSS。
+        注意：main.ts 仍会 import 这些 CSS（作为构建入口），dev 下与 <link> 重复加载无害。
+    -->
+    <% if (isDev) { %>
+        <link rel="stylesheet" href="/client/src/tailwind.css" />
+        <link rel="stylesheet" href="/client/src/main.scss" />
+    <% } else { %>
         <link rel="stylesheet" href="/assets/style.css" />
-        <% } %>
+    <% } %>
 </head>
 
 <body class="flex h-screen flex-col overflow-hidden bg-gray-50 text-gray-900">

@@ -53,7 +53,7 @@ export default function renderPageMiddleware(req: Request, res: Response, next: 
         let stack: LayoutLayer[] = [...layouts];
 
         // 兼容旧调用：不传layouts，使用 pageShell
-        if (!Array.isArray(layouts) && pageShell && pageShellSlot) {
+        if (Array.isArray(layouts) && layouts.length === 0 && pageShell && pageShellSlot) {
             stack = [{ tplName: pageShell, slotKey: pageShellSlot }];
         }
 
@@ -82,17 +82,25 @@ export default function renderPageMiddleware(req: Request, res: Response, next: 
                         layout: false
                     });
                 } else {
-                    // 最后一层：直接 res.render，不再走renderToHtml
-                    const finalLayoutOpt = outerFlag ? 'layouts/layout' : false;
-
-                    res.render(tplName, {
+                    // 最后一层：渲染出完整 HTML 字符串，再由外层 layout 包裹后主动 send。
+                    // 不要走 res.render(…, {layout})：若全局注册了 express-ejs-layouts，
+                    // 其 res.render 劫持可能让响应缓冲却永不 end，导致请求一直 pending。
+                    const innerHtml = await renderToHtml(res, tplName, {
                         ...pageOptions,
                         [slotKey]: currentHtml,
-                        layout: finalLayoutOpt
-                    }, (err) => {
-                        if (err) return next(err);
+                        layout: false
                     });
-                    // 直接返回，防止后续执行 res.send 造成重复响应
+
+                    const finalHtml = outerFlag
+                        ? await renderToHtml(res, 'layouts/layout', {
+                              ...pageOptions,
+                              body: innerHtml,
+                              layout: false
+                          })
+                        : innerHtml;
+
+                    res.status(200).type('html').send(finalHtml);
+                    // 直接返回，防止执行到 catch / res.send 造成重复响应
                     return;
                 }
             }

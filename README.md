@@ -23,13 +23,15 @@
 htmx-study-express-vite/
 ├─ server/            # Express 后端（Node/TypeScript）
 │  └─ src/
-│     ├─ index.ts     # 入口：加载 Vite middleware / 静态资源
+│     ├─ index.ts     # 入口：按 dev/prod 挂载 Vite middleware 或静态资源，并启动 server
 │     ├─ app.ts       # createApp() 封装（含 i18next 初始化与中间件挂载）
 │     ├─ routes.ts    # 路由汇总（pages / locale / list）
 │     ├─ routes/      # 各业务路由（整页 / 语言切换 / 待办数据）
 │     ├─ middleware/  # 渲染 & i18n 中间件（fragment / render / i18n）
 │     ├─ i18n/        # i18next 初始化与语言加载
 │     ├─ locales/     # 语言包（zh-CN.json / en-US.json）
+│     ├─ runtime/     # 运行时装配（shutdownRuntime.ts）
+│     ├─ utils/       # 运行时能力（gracefulShutdown / listenWithRetry）
 │     ├─ views/       # EJS 视图（layouts + partials + pages）
 │     └─ legacy/      # 历史中间件存档（render-fragment / render-page）
 ├─ client/            # 前端源码
@@ -55,6 +57,34 @@ npm test           # 运行测试
 ```
 
 > `npm run dev` = Node + Vite **一条命令同时启动**，无需 `vite` 与 `node` 分开启动。
+
+### 开发态进程生命周期（退场 / 入场）
+
+当前开发模式是**单进程**：Express、Vite middleware、Vite HMR 都挂在同一个 Node 进程和同一个 HTTP 端口上。
+
+这意味着服务端文件变更时，不只是“旧进程退出、新进程启动”这么简单，还存在一个短暂交接窗口：
+
+1. **退场**：旧进程收到 `SIGTERM`（watch 重启）或 `SIGINT`（用户 `Ctrl+C`）后，要尽快关闭 HTTP server、现有 socket 和 Vite 自身资源。
+2. **入场**：新进程启动时，若旧进程还没完全释放端口，新的 `server.listen(port)` 可能先遇到 `EADDRINUSE`，此时需要短暂重试。
+
+本项目把这两个阶段拆成两个独立 util：
+
+| 阶段 | 文件 | 作用 |
+|---|---|---|
+| 退场 | `server/src/utils/gracefulShutdown.ts` | 关闭旧进程的 HTTP 监听、socket 和 Vite 资源，尽量缩短旧进程占端口时间 |
+| 入场 | `server/src/utils/listenWithRetry.ts` | 新进程监听端口时若遇到 `EADDRINUSE`，稍等后重试，避免因为旧进程晚几百毫秒释放端口而直接崩掉 |
+
+`server/src/runtime/shutdownRuntime.ts` 只负责把退场逻辑注册到进程信号；开发模式下的 Vite 创建仍直接保留在 `server/src/index.ts` 的 `if (!isProd)` 分支里，便于从入口一眼看出 dev / prod 差异。
+
+可以把它理解为：
+
+- `createGracefulShutdown` 负责让旧进程**尽快放手**
+- `node --watch-path=server ...` 负责把新进程**重新拉起来**
+- `listenWithRetry` 负责让新进程在旧进程还没完全放手时**先别崩**
+
+注意：`listenWithRetry` 重试的是当前新进程里的 `server.listen(port)`，不是进程重启本身。真正结束旧进程并拉起新进程的，是 `node --watch-path=server ...` 这条启动链路。
+
+其中 `SIGINT` 只代表“用户手动结束当前进程”，通常不会自动拉起新进程，所以一般不会进入 `listenWithRetry` 的重试链路；`SIGTERM` 则更常见于 watch 重启，后续才会有新进程入场。
 
 ## 国际化（i18n）方案
 

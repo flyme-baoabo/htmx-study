@@ -119,7 +119,7 @@ export function fragmentRenderMiddleware(
 
 /**
  * 保护partials路由中间件：禁止浏览器直接访问partial片段接口
- * app.use('/partials/*', protectPartialsRoute)
+ * app.use('/partials/{*splat}', protectPartialsRoute)
  */
 export function protectPartialsRoute(
     req: Request,

@@ -16,6 +16,9 @@ for (const [path, meta] of Object.entries(PAGE_META)) {
             todos: listTodos(),
             i18nJson,
             currentPage: path,
+            // 渲染链：内容 -> app-layout(应用外壳) -> 最外层 layout.ejs(<head>/<script>/<link>)
+            layouts: [{ tplName: 'layouts/app-layout', slotKey: 'outletContent' }],
+            useOuterEjsLayout: true,
         });
     });
 }

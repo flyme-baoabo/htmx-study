@@ -136,3 +136,62 @@ app.use(renderPageMiddleware);            // ④ 后挂 res.renderPage
 **一句话记法：**
 - 要 **app-layout 外壳**（整页或带壳重绘）→ `renderPage`
 - 只要 **局部列表元素** → `res.render('partials/…')`
+
+---
+
+## 7. 开发态进程生命周期（退场 / 入场）
+
+开发模式采用 **Node watch + Vite middleware 单进程**。也就是说，Express、Vite HMR、Vite watcher 共用同一个 Node 进程和同一个 HTTP 端口。
+
+因此，服务端文件变更后的进程切换分为两个阶段，职责不能混：
+
+### 7.1 退场：旧进程怎么尽快退出
+
+旧进程收到以下信号之一时，先走退场：
+
+- `SIGTERM`：通常来自 `node --watch-path=server ...` 的重启流程
+- `SIGINT`：通常来自用户在终端按 `Ctrl+C`
+
+退场逻辑位于 `server/src/utils/gracefulShutdown.ts` 的 `createGracefulShutdown`：
+
+1. 跟踪 `http.Server` 上的连接 socket
+2. 调 `server.close()` 停止接受新连接
+3. 调 `closeIdleConnections` / `closeAllConnections` 并结束已有 socket
+4. 并行关闭外部资源（当前是 `vite.close()`）
+5. 超时后强制 destroy 剩余连接，避免旧进程长期占住端口
+
+**边界：** 这段逻辑只负责旧进程退场，不负责重启新进程；它的目标是尽快释放 server 和开发环境下的 vite 资源，让端口尽快可用。
+
+### 7.2 入场：新进程启动时端口还没空怎么办
+
+新进程启动监听端口时，若旧进程刚收到 `SIGTERM` 但还没完全释放端口，`server.listen(port)` 可能先报 `EADDRINUSE`。
+
+入场逻辑位于 `server/src/utils/listenWithRetry.ts` 的 `listenWithRetry`：
+
+1. 尝试 `server.listen(port)`
+2. 若成功，进入正常服务
+3. 若失败且错误码是 `EADDRINUSE`，等待 500ms 后重试
+4. 若是其他错误，直接打印并退出
+
+**边界：** 这段逻辑只负责新进程入场兜底，不负责关闭旧进程资源，也不负责重启进程；它重试的是当前进程里的 `server.listen(port)`。
+
+真正结束旧进程并拉起新进程的是 `node --watch-path=server ...` 这条启动链路；`listenWithRetry` 只是新进程起来后，若端口仍短暂被占用时的监听重试兜底。
+
+### 7.3 为什么 `SIGINT` 通常不会进入重试链路
+
+`SIGINT` 只表示“当前进程被用户手动结束”。它会触发退场，但通常**不会自动拉起新进程**，所以一般不会再走到 `listenWithRetry`。
+
+只有 watch 驱动的 `SIGTERM` 场景，后续才常常伴随一个新进程启动，此时才可能命中 `EADDRINUSE -> retry` 这条入场链路。
+
+### 7.4 代码组织约定
+
+- `server/src/utils/gracefulShutdown.ts` 和 `server/src/utils/listenWithRetry.ts` 属于**底层运行时能力**，适合放 `utils/`
+- `server/src/index.ts` 负责**装配**：创建 app/server、在 `if (!isProd)` 中直接创建并挂载 Vite、中间件、启动 listen
+- `server/src/runtime/shutdownRuntime.ts` 负责把退场逻辑注册到进程信号，属于**运行时装配**，但不是底层能力本身
+- 当前约定是：**Vite 创建直接留在入口里以保持 dev/prod 分支可见；shutdown 注册可放 runtime 层；底层能力继续放 utils 层**
+
+一句话记法：
+
+- `createGracefulShutdown` 负责让旧进程**尽快放手**
+- `node --watch-path=server ...` 负责把新进程**重新拉起来**
+- `listenWithRetry` 负责让新进程在旧进程还没完全放手时**先别崩**
