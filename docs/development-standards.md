@@ -83,17 +83,19 @@ flowchart LR
 
 | 中间件 | 文件 | 职责 |
 |---|---|---|
-| `fragmentRenderMiddleware` | `server/src/middleware/render-fragment.js` | 重写 `res.render`：`partials/` 开头 → 走 `res.__render`（原点渲染，绕开布局）；其余 → 交给 express-ejs-layouts 包装后的 `layoutRender` |
-| `renderPageMiddleware` | `server/src/middleware/render-page.js` | 在 `res` 上挂载 `res.renderPage(view, options)`，一次性完成「内容 + app-layout 外壳」两层嵌套 |
+| `fragmentRenderMiddleware` | `server/src/middleware/render-fragment.ts` | 重写 `res.render`：`partials/` 开头的模板一律注入 `options.layout = false`，让 express-ejs-layouts 走**原始 render**（不套外层布局），返回可被 htmx 替换的纯片段；其余原样交还 `layoutRender` |
+| `renderPageMiddleware` | `server/src/middleware/render-page.ts` | 在 `res` 上挂载 `res.renderPage(view, options)`，一次性完成「内容 + app-layout 外壳」两层嵌套 |
+
+> 转发时 `res.render` 已被 express-layouts 包装，`layoutRender = res.render.bind(res)` 保留 `this === res`（内部依赖 `this.req.app`），避免 TypeError。
 
 ### 6.2 挂载顺序（不可颠倒）
 
-```js
+```ts
 app.use(fragmentRender);  // 必须先挂：renderPage 内部的 res.render 要经过本包装分发
 app.use(renderPage);      // 后挂
 ```
 
-`renderPage` 内部调用的 `res.render` **就是** fragment 挂载过的那一份同一个函数在做分发，只是视图名不同走不同分支。顺序反了会导致互相覆盖、局部片段被错误套壳。
+`renderPage` 内部调用的 `res.render` **就是** fragment 挂载过的那一份同一个函数在做分发，只是视图名不同走不同分支。顺序颠倒会导致互相覆盖、局部片段被错误套壳。
 
 ### 6.3 `res.renderPage` 的两层嵌套
 
@@ -117,7 +119,7 @@ app.use(renderPage);      // 后挂
 |---|---|---|
 | 整页（首屏 / 整页导航，如 `pages.js`） | `res.renderPage(meta.view, {...})` | 需要完整页面 = 内容 + app-layout + layout |
 | 语言切换 `/body`（`locale.js`） | `res.renderPage(..., { pageLayout:false })` | 前端要整块替换 `#root`，而 `#root` 内正是「app-layout 外壳 + 内容」——**需要带壳**，但不要 `layout`（`<html>/<head>/<body>` 那层） |
-| 局部片段（待办增删改，`partials/item`、`partials/list`） | `res.render('partials/…', ...)` | 只要一个列表元素，不沾外壳；fragment 会**自动绕开布局** |
+| 局部片段（待办增删改，`partials/item`、`partials/list`） | `res.render('partials/…', ...)` | 只要一个列表元素，不沾外壳；fragment 会**自动注入 `layout:false` 绕开布局** |
 
 **例外的直觉纠偏 —— 为什么 `/body` 是 `renderPage` 而不是 `res.render`？**
 

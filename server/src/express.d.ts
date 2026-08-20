@@ -11,17 +11,6 @@ declare global {
              * 由 middleware/render-page.ts 在该中间件作用域内挂载到 res 上。
              */
             renderPage(pageView: string, options?: Record<string, unknown>): void;
-
-            /**
-             * express-ejs-layouts 在运行时保存的「未套布局的原始 render」。
-             * 见 express-layouts.js：`if (!res.__render) res.__render = res.render;`
-             * render-fragment.ts 用它渲染 partials 片段以绕过外层布局。
-             */
-            __render?: (
-                view: string,
-                options?: object | ((err: Error, html: string) => void),
-                callback?: (err: Error, html: string) => void
-            ) => void;
         }
     }
 }
