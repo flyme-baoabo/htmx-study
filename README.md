@@ -21,13 +21,17 @@
 
 ```
 htmx-study-express-vite/
-├─ server/            # Express 后端（Node）
+├─ server/            # Express 后端（Node/TypeScript）
 │  └─ src/
-│     ├─ index.js     # 入口：加载 Vite middleware / 静态资源
-│     ├─ app.js       # createApp() 封装（含 i18next 初始化）
-│     ├─ routes/      # 路由 / 业务
+│     ├─ index.ts     # 入口：加载 Vite middleware / 静态资源
+│     ├─ app.ts       # createApp() 封装（含 i18next 初始化与中间件挂载）
+│     ├─ routes.ts    # 路由汇总（pages / locale / list）
+│     ├─ routes/      # 各业务路由（整页 / 语言切换 / 待办数据）
+│     ├─ middleware/  # 渲染 & i18n 中间件（fragment / render / i18n）
+│     ├─ i18n/        # i18next 初始化与语言加载
 │     ├─ locales/     # 语言包（zh-CN.json / en-US.json）
-│     └─ views/       # EJS 视图（布局 + partials + 页面）
+│     ├─ views/       # EJS 视图（layouts + partials + pages）
+│     └─ legacy/      # 历史中间件存档（render-fragment / render-page）
 ├─ client/            # 前端源码
 │  └─ src/
 │     ├─ main.ts      # 入口：导入 htmx + 样式
@@ -117,6 +121,24 @@ nonExplicitSupportedLngs: true,     // 允许“纯语言码”（如 zh / en）
 ```
 
 `res.locals.t` 与 `res.locals.currentLocale` 在中间件中按 `req.t / req.i18n.language` 注入，`html lang` 等场景直接取 `currentLocale`。
+
+## 渲染与片段中间件
+
+页面组装由安装于 `server/src/middleware/` 的渲染中间件完成，业务路由只关心「要整页还是片段」：
+
+- **整页**：`res.renderPage(meta.view, { ... })` —— 内容 + `app-layout` 外壳 + 全局 `layout`。
+- **片段（无刷新重绘，如语言切换）**：`res.renderPage(..., { pageLayout: false })` —— 保留 `app-layout` 外壳但不套全局 `layout`。
+- **局部元素片段**（待办增删改）：`res.render('partials/…', ...)` —— 由 `fragment` 中间件**自动注入 `layout:false`**，无需手写。
+
+相关文件与中间件：
+
+| 文件 | 导出 | 作用 |
+|---|---|---|
+| `middleware/fragment.middleware.ts` | `injectFragmentFlagMiddleware` / `fragmentRenderMiddleware` / `protectPartialsRoute` | htmx 标记注入、`res.render` 片段重写、`/partials·` 防直访 |
+| `middleware/render.middleware.ts` | `renderPageMiddleware` | 挂载 `res.renderPage` 多层布局组装 |
+| `middleware/i18n.middleware.ts` | `i18nRequest` / `localeBridge` | i18n 语言解析与 `res.locals` 桥接 |
+
+> ⚠️ **挂载顺序不可颠倒**：`injectFragmentFlag → fragmentRender → protectPartials('/partials/*') → renderPage`。详细约定见 [**docs/development-standards.md**](docs/development-standards.md)。
 
 ## HMR 说明
 

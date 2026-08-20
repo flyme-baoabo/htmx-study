@@ -3,9 +3,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import expressLayouts from 'express-ejs-layouts';
 import { initI18n } from './i18n/config.js';
-import { i18nRequest, localeBridge } from './middleware/i18n.js';
-import fragmentRender from './middleware/render-fragment.js';
-import renderPage from './middleware/render-page.js';
+import { i18nRequest, localeBridge } from './middleware/i18n.middleware.js';
+import renderPageMiddleware from './middleware/render.middleware.js';
+import {
+    injectFragmentFlagMiddleware,
+    fragmentRenderMiddleware,
+    protectPartialsRoute,
+} from './middleware/fragment.middleware.js';
 import type { Express } from 'express';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -31,17 +35,20 @@ export async function createApp(): Promise<Express> {
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
 
-    await initI18n(); // i18next 初始化（语言包 / 语言探测规则），见 middleware/i18n.js
+    await initI18n(); // i18next 初始化（语言包 / 语言探测规则），见 middleware/i18n.middleware.js
 
     app.use(i18nRequest()); // ① 每请求解析语言，挂 req.t() / req.i18n
 
     // ② 把 req.t 桥接到 res.locals，EJS 模板（含 partials）才能直接用 <%= t('...') %>
     app.use(localeBridge);
 
-    // 局部片段渲染（partials 绕过 express-layouts）必须先于 render-page 挂载
-    app.use(fragmentRender);
-    // 页面组装渲染器（res.renderPage）：整页 / 片段 两层嵌套一次完成
-    app.use(renderPage);
+    // htmx 请求标记：先注入标记，再重写 render，最后挂 partials 保护
+    // ⚠️ 顺序不能乱：inject -> fragmentRender -> protectPartials
+    app.use(injectFragmentFlagMiddleware);
+    app.use(fragmentRenderMiddleware);
+    app.use('/partials/*', protectPartialsRoute);
+    // 页面组装渲染器（res.renderPage）：整页 / 片段 由 render.middleware 内部完成
+    app.use(renderPageMiddleware);
 
     return app;
 }

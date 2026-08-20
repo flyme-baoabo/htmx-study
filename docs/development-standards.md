@@ -75,43 +75,51 @@ flowchart LR
 
 ---
 
-## 6. 渲染中间件（render-fragment / render-page）⚡
+## 6. 渲染中间件（fragment.middleware / render.middleware）⚡
 
-服务端采用 **express-ejs-layouts + 两层自定义中间件** 完成页面组装。两条铁律：**挂载顺序不能错**、**业务路由统一走 `res.renderPage`**。
+服务端采用 **express-ejs-layouts + 渲染中间件** 完成页面组装。三条铁律：**挂载顺序不能错**、**业务路由统一走 `res.renderPage`**、**局部片段走 `res.render('partials/…')`**。
 
 ### 6.1 职责分工
 
 | 中间件 | 文件 | 职责 |
 |---|---|---|
-| `fragmentRenderMiddleware` | `server/src/middleware/render-fragment.ts` | 重写 `res.render`：`partials/` 开头的模板一律注入 `options.layout = false`，让 express-ejs-layouts 走**原始 render**（不套外层布局），返回可被 htmx 替换的纯片段；其余原样交还 `layoutRender` |
-| `renderPageMiddleware` | `server/src/middleware/render-page.ts` | 在 `res` 上挂载 `res.renderPage(view, options)`，一次性完成「内容 + app-layout 外壳」两层嵌套 |
+| `injectFragmentFlagMiddleware` | `server/src/middleware/fragment.middleware.ts` | 请求入口：解析 hx‑request / history‑restore 头，挂载 `req.isHXRequest / isHistoryRestore / isFragment`，并在 `res` 挂 `res.isFragmentRequest(view)` 预判方法 |
+| `fragmentRenderMiddleware` | 同上 | 重写 `res.render`：当 `res.isFragmentRequest(view)` 为真且用户未显式传 `layout` 时，自动注入 `layout=false`（返回可被 htmx 替换的纯片段）；其余原样交还 |
+| `protectPartialsRoute` | 同上 | 挂在 `/partials/*`，**禁止浏览器直接访问**片段接口：非 htmx 请求直接 `403` |
+| `renderPageMiddleware` | `server/src/middleware/render.middleware.ts` | 在 `res` 上挂载 `res.renderPage(view, options)`，按 `layouts` 数组**由内向外**组装多层布局外壳 |
 
-> 转发时 `res.render` 已被 express-layouts 包装，`layoutRender = res.render.bind(res)` 保留 `this === res`（内部依赖 `this.req.app`），避免 TypeError。
+> 转发时 `res.render` 已被 express-layouts 包装，需用 `bind` 保留 `this === res`（内部依赖 `this.req.app`），避免 TypeError。
 
 ### 6.2 挂载顺序（不可颠倒）
 
 ```ts
-app.use(fragmentRender);  // 必须先挂：renderPage 内部的 res.render 要经过本包装分发
-app.use(renderPage);      // 后挂
+app.use(injectFragmentMiddleware);          // ① 先注入 htmx 标记，供后续判定在 req 上取标记
+app.use(fragmentMiddleware);               // ② 重写 res.render：isFragment 命中时自动 layout:false
+app.use('/partials/*', protectPartialsRoute); // ③ 保护碎片接口
+app.use(renderPageMiddleware);            // ④ 后挂 res.renderPage
 ```
 
-`renderPage` 内部调用的 `res.render` **就是** fragment 挂载过的那一份同一个函数在做分发，只是视图名不同走不同分支。顺序颠倒会导致互相覆盖、局部片段被错误套壳。
+`renderPageMiddleware` 内部调用的 `res.render` 就是 **② 挂载过的那同一个分发函数**，只是视图名不同走不同分支。顺序颠倒会导致互相覆盖、局部片段被错误套壳，或保护路由读不到标记。
 
-### 6.3 `res.renderPage` 的两层嵌套
+### 6.3 `res.renderPage` 的嵌套组装
+
+`res.renderPage` 由内向外执行，`layouts` 数组决定外壳套几层（缺省退化为单层 `app-layout`）：
+
+1. **第一层**：渲染内容视图本体，`layout:false` 拿到纯 html 字符串（回调）；
+2. **中间层**：逐个套上 `layouts` 里的外壳模板，都拿到字符串继续拼装；
+3. **最外层**：`res.render` 直接输出，`layout` 取 `outerFlag ? 'layouts/layout' : false`（传入 callback 监错并经 `next` 抛出）。
 
 | 场景 | 内容 -> | 外壳 -> | 外层布局 |
 |---|---|---|---|
-| 整页（`pageLayout=true` / `layout='布局名'`） | 内容视图（`index` / `listPage`…） | `app-layout.ejs`（注入 `outletContent`） | 套 `layout.ejs`（布局名） |
-| 片段（`pageLayout=false`，供 htmx `/body` 整块替换 `#root`） | 内容视图 | `app-layout.ejs` | 不套（`layout:false`） |
+| 整页（缺省 `pageLayout` 即 true） | 内容视图（`index` / `listPage`…） | `app-layout.ejs`（注入 `outletContent`） | 套 `layouts/layout`（全局 body 骨架） |
+| 片段（`pageLayout:false`，供 htmx `/body` 整块替换 `#root`） | 内容视图 | `app-layout.ejs` | 不套（`layout:false`） |
 
-`layout` 选项：默认由 `pageLayout` 推导（`true→'layout'`，`false→false`）；也可显式传布局名或 `layout:false`。
+`outerFlag = useOuterEjsLayout ?? pageLayout ?? true`（`useOuterEjsLayout` > `pageLayout` > 默认 `true`）。
 
-- **第一层渲染**（内容视图）传回调拿字符串，因为它要注入 `outletContent` —— 第②层没有取字符串需求，故**不传回调**，交由 Express 自动 `send` + 自动 `next(err)`。
-- `renderPage` 里第一层已用 `new Promise` 包成 `await` 并 `catch`；第二层的错误由 Express 自动进入错误链。
-- **新增页面**：只要加一个内容视图（如 `listPage.ejs`），无需改中间件。
-- **业务路由禁止手写 `layout:false` / 手动套壳** —— 一律用 `res.renderPage`。
+- **新增页面**：只要加一个内容视图（如 `listPage.ejs`）并在 `PAGE_META` 登记，无需改中间件。
+- **业务路由禁止手写 `layout:false` / 手动换壳** —— 一律用 `res.renderPage`。
 
-### 6.5 用哪个渲染 API（`renderPage` vs `res.render`）⚡
+### 6.4 用哪个渲染 API（`renderPage` vs `res.render`）⚡
 
 **核心判据：返回的响应里要不要带 app-layout 外壳（header + `#outlet` + footer）。**
 

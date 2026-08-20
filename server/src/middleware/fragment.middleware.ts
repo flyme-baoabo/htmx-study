@@ -157,3 +157,34 @@ export function protectPartialsRoute(
     }
     next();
 }
+
+
+// import express from 'express';
+// import {
+//   injectFragmentFlagMiddleware,
+//   fragmentRenderMiddleware,
+//   protectPartialsRoute
+// } from './fragment-middleware';
+
+// const app = express();
+
+// // ⚠️顺序不能乱：先注入标记，再重写render
+// app.use(injectFragmentFlagMiddleware);
+// app.use(fragmentRenderMiddleware);
+// app.use('/partials/*', protectPartialsRoute);
+
+// // 控制器示例
+// app.get('/demo', (req, res) => {
+//   // 请求层面原始标记
+//   console.log('isHXRequest', req.isHXRequest);
+//   console.log('isHistoryRestore', req.isHistoryRestore);
+//   console.log('isFragment', req.isFragment);
+
+//   // 预判本次render是否输出片段
+//   const willFragment = res.isFragmentRequest('partials/card');
+//   console.log('willFragment', willFragment);
+
+//   res.render('partials/card');
+// });
+
+// app.listen(3000);

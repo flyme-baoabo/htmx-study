@@ -27,7 +27,13 @@ export interface RenderPageOptions {
     /** 兼容老参数：单中间壳模板名 */
     pageShell?: string;
     pageShellSlot?: string;
-    /** 兼容老参数：是否开启外层layout，优先级低于 useOuterEjsLayout */
+    /**
+     * 兼容老参数：是否启用最外层全局 layout（layout.ejs）。缺省视为 true。
+     * 优先级用 useOuterEjsLayout > pageLayout > 默认 true 兜底。
+     * - true：最外层外壳 res.render 传 layout:'layouts/layout'，输出完整骨架页。
+     * - false：最外层外壳传 layout:false，输出仅「外壳+内容」的片段（无 <html>/<head>/<body> 骨架），
+     *     供 htmx /body 整块替换 #root 场景；勿用于整页导航，否则缺骨架裸页。
+     */
     pageLayout?: boolean;
 
     /** 其余透传给模板的业务locals */
@@ -116,7 +122,7 @@ export default function renderPageMiddleware(req: Request, res: Response, next: 
                     });
                 } else {
                     // 最后一层：直接 res.render，不再走renderToHtml
-                    const finalLayoutOpt = outerFlag ? 'layout' : false;
+                    const finalLayoutOpt = outerFlag ? 'layouts/layout' : false;
 
                     res.render(tplName, {
                         ...pageOptions,
