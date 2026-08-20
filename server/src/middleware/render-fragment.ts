@@ -13,7 +13,8 @@ export default function fragmentRenderMiddleware(
     res: Response,
     next: NextFunction
 ): void {
-    const layoutRender = res.render; // expressLayouts 包装后的 render
+    // 提前绑定 this，避免调用时丢失 res 上下文（Express render 内部依赖 this.req.app）
+    const layoutRender = res.render.bind(res); // expressLayouts 包装后的 render
 
     res.render = function (
         this: Response,
@@ -23,12 +24,13 @@ export default function fragmentRenderMiddleware(
     ): void {
         // 判断依据是“视图名”而非 req.url：partials/ 开头的模板都是局部片段
         if (view.startsWith('partials/')) {
-            // 直接调用 express-layouts 保存的原始 render，不套任何布局，返回可被 htmx 替换的纯片段
-            // res.__render 的类型由 express.d.ts 扩展补充
+            // express-layouts 会把原始 render 存到 res.__render；这里用 pre-bound 版本，
+            // 不套任何布局，返回可被 htmx 替换的纯片段。
+            const raw = res.__render ? res.__render.bind(res) : layoutRender;
             if (typeof options === 'function') {
-                return res.__render!(view, options);
+                return raw(view, options);
             }
-            return res.__render!(view, options || {}, callback);
+            return raw(view, options || {}, callback);
         }
         // 非片段：转发给 express-layouts 包装后的 render 原样处理
         if (typeof options === 'function') {
