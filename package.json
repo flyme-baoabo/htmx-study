@@ -3,14 +3,16 @@
     "version": "1.0.0",
     "description": "This is my first htmx study project",
     "type": "module",
-    "main": "server/src/index.js",
+    "main": "server/src/index.ts",
     "scripts": {
-        "dev": "node --watch-path=server --watch-preserve-output server/src/index.js",
+        "dev": "tsx watch server/src/index.ts",
         "build": "vite build",
+        "build:server": "tsc -p tsconfig.server.json && node scripts/build-server.mjs",
+        "build:all": "npm run build:server && npm run build",
         "typecheck": "tsc --noEmit",
-        "start": "NODE_ENV=production node server/src/index.js",
-        "test": "node --test --test-concurrency=1",
-        "test:watch": "node --watch --test"
+        "start": "NODE_ENV=production node dist-server/index.js",
+        "test": "tsx --test --test-concurrency=1",
+        "test:watch": "tsx --test --watch"
     },
     "keywords": [
         "htmx"
@@ -30,9 +32,15 @@
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.1.12",
+        "@types/express": "^5.0.6",
+        "@types/express-ejs-layouts": "^2.5.4",
+        "@types/node": "^26.2.0",
+        "@types/supertest": "^7.2.1",
+        "jiti": "^2.7.0",
         "sass": "^1.102.0",
         "supertest": "^7.2.2",
         "tailwindcss": "^4.1.12",
+        "tsx": "^4.23.12",
         "typescript": "^7.0.2",
         "vite": "^8.2.1"
     }

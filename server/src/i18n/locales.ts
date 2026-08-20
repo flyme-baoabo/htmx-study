@@ -1,14 +1,13 @@
 /** 项目支持的语言白名单（供语言探测 / 路由校验 / 外部引用） */
-export const SUPPORTED_LANGUAGES = ['zh-CN', 'en-US'];
+export const SUPPORTED_LANGUAGES: string[] = ['zh-CN', 'en-US'];
 
 /**
  * 按语言键加载对应翻译 JSON（业务层工具，返回值直接可作模板变量 / 前端 window.I18n）。
- * @param {string} lang 语言码，如 'zh-CN'、'en-US'
- * @returns {Promise<object>} 语言包对象
+ * @param lang 语言码，如 'zh-CN'、'en-US'
  */
-export async function loadI18n(lang = 'zh-CN') {
+export async function loadI18n(lang = 'zh-CN'): Promise<Record<string, unknown>> {
     const mod = await import(`../locales/${lang}.json`, { with: { type: 'json' } });
-    return mod.default;
+    return mod.default as Record<string, unknown>;
 }
 
 // 下面的为 Node 各版本 兼容写法，Node 18支持直接 import zhCN from './locales/zh-CN.json'，高版本 需要加上 with { type: 'json' }

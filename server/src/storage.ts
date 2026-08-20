@@ -8,19 +8,31 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '../../data');
 const DATA_FILE = path.join(DATA_DIR, 'todos.json');
 
+export interface TodoItem {
+    id: number;
+    text: string;
+    done: boolean;
+}
+
+export interface TodosData {
+    todos: TodoItem[];
+    nextId: number;
+}
+
 // 读取：如果文件不存在，返回默认初始数据
-export function loadTodos() {
+export function loadTodos(): TodosData {
     if (!existsSync(DATA_FILE)) {
         return {
             todos: [
                 { id: 1, text: '学习 htmx', done: true },
                 { id: 2, text: '接入 Vite + Express', done: false },
-            ], nextId: 3
+            ],
+            nextId: 3,
         };
     }
     try {
         const raw = readFileSync(DATA_FILE, 'utf-8');
-        return JSON.parse(raw);
+        return JSON.parse(raw) as TodosData;
     } catch (err) {
         console.error('读取数据文件失败，使用空数据启动:', err);
         return { todos: [], nextId: 1 };
@@ -28,7 +40,7 @@ export function loadTodos() {
 }
 
 // 写入：原子性 —— 先保证目录存在，再整体覆盖写入
-export function saveTodos({ todos, nextId }) {
+export function saveTodos({ todos, nextId }: TodosData): void {
     mkdirSync(DATA_DIR, { recursive: true });
     writeFileSync(DATA_FILE, JSON.stringify({ todos, nextId }, null, 2), 'utf-8');
 }

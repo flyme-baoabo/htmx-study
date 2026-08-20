@@ -13,7 +13,7 @@ router.get('/todos', (req, res) => {
 
 // 添加待办：返回局部片段，htmx 用它替换 #todo-list
 router.post('/todos', (req, res) => {
-    const text = (req.body?.text || '').trim();
+    const text = (req.body?.text ?? '').toString().trim();
     if (!text) return res.status(400).send('The to-do item cannot be empty!');
 
     const newItem = create(text);
@@ -43,7 +43,7 @@ router.delete('/todos/:id', (req, res) => {
     if (list().length === 0) {
         // 删光最后一条：留 `#todo-list` 的空白占位回来
         res.set('HX-Retarget', '#todo-list'); // 覆盖 closest .todo-item
-        res.setHeader('HX-Reswap', 'outerHTML'); // 覆盖 hx-swap="delete">
+        res.setHeader('HX-Reswap', 'outerHTML'); // 覆盖 hx-swap="delete"
         return res.render('partials/list', { todos: list() });
     }
     res.status(200).end();

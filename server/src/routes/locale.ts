@@ -17,14 +17,14 @@ router.post('/change-language', async (req, res) => {
     res.cookie('lang', lang, {
         httpOnly: false,
         path: '/'
-    })
+    });
     const i18nJson = await loadI18n(lang);
     res.status(200).json({ i18nJson, isSuccess: true });
 });
 
 // 语言无感切换：按当前 path 重绘 app-layout 片段（不套外层 layout.ejs），供 htmx 整块替换 #root。
 // 前端会带 ?path=<location.pathname>，据此还原“当前页”的内容。
-router.get('/body', async (req, res) => {
+router.get('/body', async (req, res, next) => {
     const lang = res.locals.currentLocale || 'zh-CN';
     const i18nJson = await loadI18n(lang);
     const meta = metaForPath(req.query.path);

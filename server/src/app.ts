@@ -6,6 +6,7 @@ import { initI18n } from './i18n/config.js';
 import { i18nRequest, localeBridge } from './middleware/i18n.js';
 import fragmentRender from './middleware/render-fragment.js';
 import renderPage from './middleware/render-page.js';
+import type { Express } from 'express';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -14,7 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * 这样测试端可通过 createApp() + mountRoutes() 直接组合，
  * 生产端通过静态目录，开发端由 index.js 注入 Vite middleware。
  */
-export async function createApp() {
+export async function createApp(): Promise<Express> {
     const app = express();
 
     // 视图引擎

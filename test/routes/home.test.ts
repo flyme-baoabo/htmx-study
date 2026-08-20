@@ -1,8 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
-import { createApp } from '../../server/src/app.js';
-import { mountRoutes } from '../../server/src/routes.js';
+import { createApp } from '../../server/src/app.ts';
+import { mountRoutes } from '../../server/src/routes.ts';
 
 // 组装一个不含前端中间件的 app 供 supertest 驱动
 const buildApp = async () => {
