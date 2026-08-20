@@ -1,26 +1,13 @@
 import express from 'express';
-import { loadI18n } from '../i18n/locales.js';
 import { PAGE_META } from '../views.js';
-import { list as listTodos } from '../list.js';
+import { createPageHandler } from '../controller/page.controller.js';
 
 const router = express.Router();
 
-// 整页路由：按页面注册表 PAGE_META 生成 GET /<path>。
-// 每个页面都加载所需 i18n，用 res.renderPage 组合「内容 -> app-layout -> layout.ejs」。
+// 整页路由：按页面注册表 PAGE_META 生成 GET /<path>，真正的渲染组装逻辑在 controller。
+// 本层只做「路径 -> handler」的薄委托。
 for (const [path, meta] of Object.entries(PAGE_META)) {
-    router.get(path, async (req, res, next) => {
-        const lang = res.locals.currentLocale || 'zh-CN';
-        const i18nJson = await loadI18n(lang);
-        res.renderPage(meta.view, {
-            title: meta.title,
-            todos: listTodos(),
-            i18nJson,
-            currentPage: path,
-            // 渲染链：内容 -> app-layout(应用外壳) -> 最外层 layout.ejs(<head>/<script>/<link>)
-            layouts: [{ tplName: 'layouts/app-layout', slotKey: 'outletContent' }],
-            useOuterEjsLayout: true,
-        });
-    });
+    router.get(path, createPageHandler(path, meta));
 }
 
 export { router as pagesRouter };

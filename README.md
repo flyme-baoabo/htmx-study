@@ -191,3 +191,16 @@ nonExplicitSupportedLngs: true,     // 允许“纯语言码”（如 zh / en）
 
 - **前端**：`client/src/main.ts` / `client/src/main.css` 改动 → Vite HMR 热更新，不刷新。
 - **后端视图**：`server/src/views/*.ejs` 在开发模式（view cache 关闭）下每次请求重新读盘，保存后刷新页面即可看到变化；路由等 `.js` 改动由 `node --watch` 自动重启。
+
+## 统一错误处理
+
+**业务错误只在 controller 层 `throw new HttpError(status, message)`**，由全局中间件统一映射成响应；service / repository 只返回可空结果（`null` / `undefined` / `boolean`），middleware 只发响应，均不抛 HTTP 错误。
+
+controller 若为 **async**，路由须用 `asyncHandler` 包裹：async 抛错会变成 rejected Promise，Express 捕获不到；`asyncHandler` 用 `.catch(next)` 把错误转进错误管道。async handler 里**任何** `throw`（含 `HttpError`、`await` 失败、`render`/`renderPage` 内部异常）都由它兜转，无需为渲染单独处理。同步路由的渲染错误则走 Express 原生 `next(err)` 链路，不需要 asyncHandler。`asyncHandler` 是路由装配工具，放在 `utils/`（不在 error.middleware），属于错误发生前的上游转运。
+
+- `errorHandler`：唯一错误出口——`HttpError` 按其 `status` 发响应，未知异常记日志 + `500`。
+- `notFoundHandler`：路由未命中的 `404` 兜底；业务「资源不存在」的 `HttpError(404)` 走 `errorHandler`，不落入此层。
+- 挂载位置：`mountRoutes` 末尾（`notFoundHandler` → `errorHandler`），二者是整条请求管道的兜底。
+- 响应形态：htmx / 浏览器导航 → 纯文本片段；fetch 等 API → `JSON { error }`。客户端 `client/src/handleError.ts` 通过 `beforeSwap` 放行 4xx/5xx，让错误体按 `hx-swap` 就地替换 `hx-target`。
+
+详见 [docs/development-standards.md](docs/development-standards.md) §8「统一错误处理」。

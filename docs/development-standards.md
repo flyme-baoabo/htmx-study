@@ -195,3 +195,59 @@ app.use(renderPageMiddleware);            // ④ 后挂 res.renderPage
 - `createGracefulShutdown` 负责让旧进程**尽快放手**
 - `node --watch-path=server ...` 负责把新进程**重新拉起来**
 - `listenWithRetry` 负责让新进程在旧进程还没完全放手时**先别崩**
+
+---
+
+## 8. 统一错误处理（global HttpError）⚠️
+
+**铁律：业务错误只在 controller 层 `throw new HttpError(status, message)`，其他层一律不得抛 HTTP 错误。**
+
+由全局 `errorHandler` 中间件统一映射成响应，业务/路由代码**不手写** `res.status(…).send(…)` 去补错误响应。
+
+### 8.1 唯一抛错点：controller
+
+| 场景 | 做法 |
+|---|---|
+| 非法入参（空文本 / 非法 id） | `throw new HttpError(400, '...')` |
+| 资源不存在（id 合法但库里没有） | `throw new HttpError(404, '...')` |
+| 服务端故障（入参已清洗却仍失败） | `throw new HttpError(500, '...')` |
+
+- **service / repository**：只返回「可空」结果（`null` / `undefined` / `boolean`），把语义交给上层，**不抛 HttpError**（见 `todo.service.ts` 的 `toView` 与 controller 对 status 的决定）。
+- **middleware**：只发送响应（`errorHandler` / `notFoundHandler`），不抛 HttpError。
+
+**controller 若为异步**：`throw` 在 async 里会变成 rejected Promise，Express 捕获不到——路由必须用 `asyncHandler(handler)` 包裹，把 `next(err)` 接回管道（见 `routes/locale.ts`）。
+
+> **asyncHandler 覆盖的错误来源**：只要 handler 是 async，**其中任何 `throw`**（含 `new HttpError(...)`、`await` 的异步失败、以及 `ctx.render` / `ctx.renderPage` 内部抛出的异常）都会变成 rejected Promise，全部经 `asyncHandler` 的 `.catch(next)` 转给 `errorHandler`——不必为 render/renderPage 单独区分。
+> 而 **同步**路由（`createTodo` 等）的渲染错误，另有链路：`nativeRender` 无回调 → 自动 `next(err)`、`renderPageMiddleware` 内 `try/catch → next(err)`，**不需要 asyncHandler**。
+
+**`asyncHandler` 为何放在 `utils/` 而非 `middleware/error.middleware.ts`**：
+- 它是「错误**之前**的上游包装」，负责把错误送进管道；`error.middleware` 是「错误**发生之后**的末端响应」。前者源头、后者终点，职责不同。
+- 它由**路由层**消费，放中间件会导致「中间件反向影响路由装配」，放 `utils/`（与 gracefulShutdown、listenWithRetry 并列）保持零依赖、可复用。
+
+### 8.2 全局兜底：`error.middleware.ts`
+
+| 导出 | 职责 |
+|---|---|
+| `HttpError` | 业务错误类，`{ status, message }` |
+| `errorHandler(err,…)` | 唯一错误出口：`err instanceof HttpError` → 按 `err.status` 发响应；未知异常 → 记日志 + `500` |
+| `notFoundHandler(req,res)` | 路由**未命中**时的 `404` 兜底 |
+
+**`notFoundHandler` vs `errorHandler` 的 404 区别**：
+- `throw new HttpError(404, …)` **必走 `errorHandler`**（业务「资源不存在」）；不会落到 `notFoundHandler`。
+- 只有「没有任何路由匹配」的请求才到 `notFoundHandler`。
+
+**响应形态**：htmx / 浏览器导航（`Accept: text/html`）→ 纯文本片段；其余 API（fetch，`Accept` 非 html）→ `JSON { error }`。客户端由 `client/src/handleError.ts` 在 `beforeSwap` 设 `shouldSwap = true`，把 4xx/5xx 错误体按 `hx-swap` 就地替换 `hx-target`。
+
+### 8.3 挂载顺序（`routes.ts` 的 `mountRoutes`）
+
+`app.use(notFoundHandler)` 与 `app.use(errorHandler)` 必须放在 `mountRoutes` 的最后：
+
+```ts
+app.use('/', pagesRouter);
+app.use('/', localeRouter);
+app.use('/', listRouter);
+app.use(notFoundHandler);  // 路由未命中 → 404
+app.use(errorHandler);     // 必须最后，4 参签名才被 Express 识别
+```
+
+因为 `index.ts` 的装配顺序是 `createApp()`（所有中间件先挂）→ 前端 Vite/static → **`mountRoutes(app)`（放最后）**，所以 `mountRoutes` 内的 `notFound` / `error` 就是整条请求管道的**末尾兜底**。
