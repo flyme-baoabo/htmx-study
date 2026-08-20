@@ -8,6 +8,8 @@ export type ShutdownSignal = (typeof SHUTDOWN_SIGNALS)[number];
 type GracefulShutdownOptions = {
     server: http.Server;
     closeApp?: () => Promise<void>;
+    // 给 closeApp 的独立等待窗口；超时后只是不再继续等它，不影响 shutdown 主线继续退场。
+    closeAppTimeoutMs?: number;
     forceExitAfterMs?: number;
 };
 
@@ -27,6 +29,7 @@ type GracefulShutdownOptions = {
 export function createGracefulShutdown({
     server,
     closeApp,
+    closeAppTimeoutMs = 400,
     forceExitAfterMs = 1500,
 }: GracefulShutdownOptions): (signal: ShutdownSignal) => Promise<void> {
     const sockets = new Set<net.Socket>();
@@ -49,6 +52,28 @@ export function createGracefulShutdown({
         forceExitTimer.unref();
 
         try {
+            // closeApp 是“尽量收尾”而不是“必须等完”：
+            // - closeApp 先完成/失败：finally 里清掉超时器并 resolve
+            // - closeAppTimer 先到点：先 resolve，shutdown 不再继续等 closeApp
+            const closeAppPromise = closeApp
+                ? new Promise<void>((resolve) => {
+                      const closeAppTimer = setTimeout(() => {
+                          console.warn(`closeApp did not finish within ${closeAppTimeoutMs}ms; continuing shutdown`);
+                          resolve();
+                      }, closeAppTimeoutMs);
+                      closeAppTimer.unref();
+
+                      void closeApp()
+                          .catch((err) => {
+                              console.warn('closeApp failed during graceful shutdown', err);
+                          })
+                          .finally(() => {
+                              clearTimeout(closeAppTimer);
+                              resolve();
+                          });
+                  })
+                : Promise.resolve();
+
             const closeServerPromise = new Promise<void>((resolve, reject) => {
                 server.close((err) => {
                     if (err) reject(err);
@@ -61,7 +86,7 @@ export function createGracefulShutdown({
                 for (const socket of sockets) socket.end();
             });
 
-            await Promise.all([closeServerPromise, closeApp?.()]);
+            await Promise.all([closeServerPromise, closeAppPromise]);
 
             clearTimeout(forceExitTimer);
             process.exit(0);
