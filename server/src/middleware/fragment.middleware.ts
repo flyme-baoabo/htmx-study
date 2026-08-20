@@ -1,30 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-
-type RenderOptions = Record<string, string | number | boolean | object | null | undefined>
-
-// ------------------------------
-// 模块扩展：给express req/res补充类型
-// ------------------------------
-declare global {
-    namespace Express {
-        interface Request {
-            /** 是否存在 hx‑request 请求头（原始header状态） */
-            isHXRequest: boolean;
-            /** 是否存在 hx‑history‑restore‑request 请求头（原始header状态） */
-            isHistoryRestore: boolean;
-            /** 衍生标记：有效的htmx片段请求，排除历史恢复回退场景 */
-            isFragment: boolean;
-        }
-
-        interface Response {
-            /**
-             * 判断本次渲染是否应当输出片段（关闭layout）
-             * @param viewName 待渲染模板名称
-             */
-            isFragmentRequest(viewName: string): boolean;
-        }
-    }
-}
+import type { RenderOptions } from '../types/render.js';
 
 /**
  * 获取htmx两个核心请求标记
@@ -157,34 +132,3 @@ export function protectPartialsRoute(
     }
     next();
 }
-
-
-// import express from 'express';
-// import {
-//   injectFragmentFlagMiddleware,
-//   fragmentRenderMiddleware,
-//   protectPartialsRoute
-// } from './fragment-middleware';
-
-// const app = express();
-
-// // ⚠️顺序不能乱：先注入标记，再重写render
-// app.use(injectFragmentFlagMiddleware);
-// app.use(fragmentRenderMiddleware);
-// app.use('/partials/*', protectPartialsRoute);
-
-// // 控制器示例
-// app.get('/demo', (req, res) => {
-//   // 请求层面原始标记
-//   console.log('isHXRequest', req.isHXRequest);
-//   console.log('isHistoryRestore', req.isHistoryRestore);
-//   console.log('isFragment', req.isFragment);
-
-//   // 预判本次render是否输出片段
-//   const willFragment = res.isFragmentRequest('partials/card');
-//   console.log('willFragment', willFragment);
-
-//   res.render('partials/card');
-// });
-
-// app.listen(3000);

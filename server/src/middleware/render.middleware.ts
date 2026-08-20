@@ -1,44 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-
-/**
- * 单层布局壳配置
- */
-export interface LayoutLayer {
-    /** 模板名称，对应views下模板 */
-    tplName: string;
-    /** 接收上一层输出html的插槽变量名 */
-    slotKey: string;
-}
-
-/**
- * renderPage 入参选项
- */
-export interface RenderPageOptions {
-    /** 中间布局外壳数组，由内向外执行 */
-    layouts?: LayoutLayer[];
-    /**
-     * 最后一层是否开启 express‑ejs‑layouts 外层layout
-     * true: 最后一层res.render传入 layout:'layout'，最外层layout.ejs 使用 <%- body %>
-     * false: 最后一层传入 layout:false，不套全局layout
-     */
-    useOuterEjsLayout?: boolean;
-
-    // 兼容旧接口参数
-    /** 兼容老参数：单中间壳模板名 */
-    pageShell?: string;
-    pageShellSlot?: string;
-    /**
-     * 兼容老参数：是否启用最外层全局 layout（layout.ejs）。缺省视为 true。
-     * 优先级用 useOuterEjsLayout > pageLayout > 默认 true 兜底。
-     * - true：最外层外壳 res.render 传 layout:'layouts/layout'，输出完整骨架页。
-     * - false：最外层外壳传 layout:false，输出仅「外壳+内容」的片段（无 <html>/<head>/<body> 骨架），
-     *     供 htmx /body 整块替换 #root 场景；勿用于整页导航，否则缺骨架裸页。
-     */
-    pageLayout?: boolean;
-
-    /** 其余透传给模板的业务locals */
-    [key: string]: any;
-}
+import type { LayoutLayer, RenderPageOptions } from '../types/render.js';
 
 /**
  * 将 res.render promisify，获取渲染后的html字符串
@@ -145,14 +106,4 @@ export default function renderPageMiddleware(req: Request, res: Response, next: 
     };
 
     next();
-}
-
-
-// ---------- 扩展Express类型，给Response增加renderPage方法 ----------
-declare global {
-    namespace Express {
-        interface Response {
-            renderPage(pageView: string, options: RenderPageOptions): Promise<void>;
-        }
-    }
 }
