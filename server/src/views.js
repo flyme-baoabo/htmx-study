@@ -6,8 +6,8 @@
  * 新增页面（/signin、/signup…）只需在此登记，整页路由与 /body 重绘自动生效。
  */
 export const PAGE_META = {
-    '/': { view: 'index', title: 'htmx Study' },
-    '/list': { view: 'listPage', title: '待办清单 - htmx Study' },
+    '/': { view: 'pages/index', title: 'htmx Study' },
+    '/list': { view: 'pages/listPage', title: '待办清单 - htmx Study' },
 };
 
 /** 按 path 取页面元信息；未知 path 兜底到首页。 */

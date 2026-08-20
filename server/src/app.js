@@ -20,7 +20,7 @@ export async function createApp() {
     // 视图引擎
     app.set('view engine', 'ejs');
     app.set('views', path.join(__dirname, 'views'));
-    app.set('layout', 'layout');
+    app.set('layout', 'layouts/layout');
     app.use(expressLayouts);
 
     // 视图可见标志：开发(true) 由 Vite 提供前端资源；生产(false) 用 dist 静态资源

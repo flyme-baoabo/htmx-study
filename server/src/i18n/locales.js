@@ -10,3 +10,10 @@ export async function loadI18n(lang = 'zh-CN') {
     const mod = await import(`../locales/${lang}.json`, { with: { type: 'json' } });
     return mod.default;
 }
+
+// 下面的为 Node 各版本 兼容写法，Node 18支持直接 import zhCN from './locales/zh-CN.json'，高版本 需要加上 with { type: 'json' }
+// import { createRequire } from 'node:module';
+// import { readFileSync } from 'node:fs';
+// const require = createRequire(import.meta.url);
+// const zhCN = JSON.parse(readFileSync(require.resolve('./locales/zh-CN.json'), 'utf8'));
+// const enUS = JSON.parse(readFileSync(require.resolve('./locales/en-US.json'), 'utf8'));

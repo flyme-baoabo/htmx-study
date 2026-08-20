@@ -17,9 +17,10 @@ export default function renderPageMiddleware(req, res, next) {
         // pageLayout: 布尔开关（true→用默认布局；false→不套外层布局）
         // layout:     布局名覆盖（'layout'/'layout-admin' 等）；显式传 false 则关闭
         const {
-            pageShell = 'app-layout',
+            pageShell = 'layouts/app-layout',
+            pageShellSlot = 'outletContent',
             pageLayout = true,
-            layout = pageLayout ? 'layout' : false,
+            layout = pageLayout ? 'layouts/layout' : false,
             ...pageOptions
         } = options;
 
@@ -35,7 +36,7 @@ export default function renderPageMiddleware(req, res, next) {
             // 不传回调 → Express 自动 send + 自动 caught 错误进 next(err)
             res.render(pageShell, {
                 ...pageOptions,              // title / todos / i18nJson / currentPage 等原样透传给外壳与 layout
-                outletContent: contentHtml,  // 页面内容注入 <main id="outlet">（命名避开 express-layouts 的 body/content 内部变量）
+                [pageShellSlot]: contentHtml,  // 页面内容注入 <main id="outlet">（命名避开 express-layouts 的 body/content 内部变量）
                 layout,
             });
         } catch (err) {
