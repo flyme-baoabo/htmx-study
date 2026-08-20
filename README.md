@@ -21,28 +21,45 @@
 
 ```
 htmx-study-express-vite/
-├─ server/            # Express 后端（Node/TypeScript）
+├─ server/                          # Node 后端业务
 │  └─ src/
-│     ├─ index.ts     # 入口：按 dev/prod 挂载 Vite middleware 或静态资源，并启动 server
-│     ├─ app.ts       # createApp() 封装（含 i18next 初始化与中间件挂载）
-│     ├─ routes.ts    # 路由汇总（pages / locale / list）
-│     ├─ routes/      # 各业务路由（整页 / 语言切换 / 待办数据）
-│     ├─ middleware/  # 渲染 & i18n 中间件（fragment / render / i18n）
-│     ├─ i18n/        # i18next 初始化与语言加载
-│     ├─ locales/     # 语言包（zh-CN.json / en-US.json）
-│     ├─ runtime/     # 运行时装配（shutdownRuntime.ts）
-│     ├─ utils/       # 运行时能力（gracefulShutdown / listenWithRetry）
-│     ├─ views/       # EJS 视图（layouts + partials + pages）
-│     └─ legacy/      # 历史中间件存档（render-fragment / render-page）
-├─ client/            # 前端源码
-│  └─ src/
-│     ├─ main.ts      # 入口：导入 htmx + 样式
-│     └─ main.scss
-├─ dist-client/       # Vite 构建产物
-├─ vite.config.mjs
-├─ test/              # node:test + supertest
+│     ├─ adapter/                   # 基础设施适配层（把外部能力接入业务）
+│     ├─ controller/                # HTTP 控制器
+│     ├─ service/                   # 业务服务层
+│     ├─ repository/                # 纯业务数据 CRUD 封装，无 Prisma 底层基建
+│     ├─ db/                        # 后端数据库底层基建目录
+│     │  ├─ prisma/                 # Prisma 专属目录
+│     │  │  ├─ schema.prisma        #   数据表模型、关联关系、数据库数据源配置
+│     │  │  └─ migrations/          #   数据库版本迁移脚本集合
+│     │  ├─ index.ts                # 数据库主实例初始化、连接池统一管理
+│     │  ├─ redis.ts                # Redis 底层连接与配置
+│     │  └─ db.config.ts            # 数据库全局参数配置
+│     ├─ dto/                       # 数据传输对象
+│     ├─ routes/                    # 业务路由
+│     ├─ utils/                     # 通用工具（gracefulShutdown / listenWithRetry）
+│     ├─ views/                     # 服务端视图模板层
+│     │  ├─ layouts/                #   global 布局骨架
+│     │  ├─ pages/                  #   业务页面模板
+│     │  └─ partials/               #   公共片段组件
+│     └─ …其余既有文件（app.ts / index.ts / i18n / middleware / runtime / locales…）
+├─ client/                          # 前端源码：html / Sass / TS / 组件
+│  ├─ src/
+│  └─ public/
+├─ dist-client/                     # Vite 构建产物，供 server 读取
+├─ dist-server/                     # TSC 编译产物，服务端生产运行目录
+├─ Dockerfile                       # 后端服务镜像构建文件（仅用于后端部署）
+├─ vite.config.ts                   # 全局 Vite 构建配置（前后端不分离共用）
+├─ tsconfig.json                    # 全局 TS 基础配置（前后端共用）
+├─ tsconfig.server.json             # 服务端 TS 独立编译配置
+├─ scripts/
+│  └─ build-server.mjs              # 服务端编译后置处理脚本（拷贝 .ejs/.json 等静态资源）
+├─ .env                             # 本地环境变量（已 gitignore，不入库）
+├─ .env.example                     # 环境变量模板
+├─ docker-compose.yml               # 全局容器编排（仅中间件）
 └─ package.json
 ```
+
+> 💡 **数据库目录说明**：`server/src/db/`（含 `prisma/`、`index.ts`、`redis.ts`、`db.config.ts`）目前是**预留的基础模板骨架**，尚未接入真实数据库。当前待办数据仍走 JSON 文件存储（`server/src/storage.ts`）；上述骨架不导入任何业务代码、不进入启动链路，`typecheck` 零副作用，待后续接入 PostgreSQL / Redis 时按骨架内注释填充即可。
 
 ## 启动方式（仅此一种，无需并行多进程）
 
