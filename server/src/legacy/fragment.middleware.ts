@@ -1,11 +1,9 @@
 import type { Request, Response, NextFunction } from 'express';
 
-// Express 5 类型已移除顶层 RenderOptions 导出（res.render 的 options 直接写为 object），
-// 这里补一个本地类型别名，保证渲染传参可读且保持与内置签名兼容。
-type RenderOptions = object;
+type RenderOptions = Record<string, string | number | boolean | object | null | undefined>
 
 // ------------------------------
-// 模块扩展：给 Express req/res 补充类型
+// 模块扩展：给express req/res补充类型
 // ------------------------------
 declare global {
   namespace Express {
@@ -110,11 +108,15 @@ export function fragmentRenderMiddleware(
   res.render = function (
     this: Response,
     view: string,
-    options?: RenderOptions | Record<string, unknown> | ((err: Error | null, html: string) => void),
-    callback?: (err: Error | null, html: string) => void
-  ): Response {
-    let locals: RenderOptions | Record<string, unknown> | undefined;
-    let cb: ((err: Error | null, html: string) => void) | undefined;
+    options?: RenderOptions | ((err: Error, html: string) => void),
+    callback?: (err: Error, html: string) => void
+  ): void {
+    // 点击call重载解析的坑：用 bind 提前把 this 固定成 res，
+    // 得到的签名仍是 Express 的 (view, options?, callback?)，参数类型检查保留
+    const nativeRender = originalRender.bind(res);
+
+    let locals: RenderOptions | undefined;
+    let cb: ((err: Error, html: string) => void) | undefined;
 
     // 处理express render多态参数
     if (typeof options === 'function') {
@@ -133,7 +135,8 @@ export function fragmentRenderMiddleware(
       Object.assign(finalLocals, { layout: false });
     }
 
-    return originalRender.call(this, view, finalLocals, cb);
+    // 交给 express 处理响应；bind 后 this 已固定为 res
+    nativeRender(view, finalLocals, cb);
   };
 
   next();
@@ -154,33 +157,3 @@ export function protectPartialsRoute(
   }
   next();
 }
-
-// import express from 'express';
-// import {
-//   injectFragmentFlagMiddleware,
-//   fragmentRenderMiddleware,
-//   protectPartialsRoute
-// } from './fragment-middleware';
-
-// const app = express();
-
-// // ⚠️顺序不能乱：先注入标记，再重写render
-// app.use(injectFragmentFlagMiddleware);
-// app.use(fragmentRenderMiddleware);
-// app.use('/partials/*', protectPartialsRoute);
-
-// // 控制器示例
-// app.get('/demo', (req, res) => {
-//   // 请求层面原始标记
-//   console.log('isHXRequest', req.isHXRequest);
-//   console.log('isHistoryRestore', req.isHistoryRestore);
-//   console.log('isFragment', req.isFragment);
-
-//   // 预判本次render是否输出片段
-//   const willFragment = res.isFragmentRequest('partials/card');
-//   console.log('willFragment', willFragment);
-
-//   res.render('partials/card');
-// });
-
-// app.listen(3000);
