@@ -1,4 +1,4 @@
-# htmx-study-express-vite
+# node-fullstack-skeleton
 
 前后端不分离小型项目：**Node + Express** 服务端渲染，**htmx** 提供前端交互能力，**Vite + Tailwind CSS** 负责前端构建与 HMR。
 

@@ -1,7 +1,7 @@
 {
-    "name": "htmx-study-express-vite",
+    "name": "node-fullstack-skeleton",
     "version": "1.0.0",
-    "description": "This is my first htmx study project",
+    "description": "Node 全栈骨架模板（Demo）：Express SSR + htmx 交互 + Vite/Tailwind 构建",
     "type": "module",
     "main": "server/src/index.ts",
     "scripts": {
