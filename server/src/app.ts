@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import expressLayouts from 'express-ejs-layouts';
 import { initI18n } from './i18n/config.js';
 import { i18nRequest, localeBridge } from './middleware/i18n.middleware.js';
+import { requestId } from './middleware/requestId.middleware.js';
 import renderPageMiddleware from './middleware/render.middleware.js';
 import {
     injectFragmentFlagMiddleware,
@@ -36,6 +37,10 @@ export async function createApp(): Promise<Express> {
     app.use(express.urlencoded({ extended: true }));
 
     await initI18n(); // i18next 初始化（语言包 / 语言探测规则），见 middleware/i18n.middleware.js
+
+    // 每个请求一个 requestId，回写 X-Request-Id；放在 body 解析之后、业务之前，
+    // 让后续路由与 errorHandler 都能拿到 req.id 用于结构化日志串连。
+    app.use(requestId);
 
     app.use(i18nRequest()); // ① 每请求解析语言，挂 req.t() / req.i18n
 

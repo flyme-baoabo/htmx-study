@@ -26,7 +26,8 @@ export function listFragment(req: Request, res: Response): void {
 function parseValidId(ctx: WebContext): number {
     const id = Number(ctx.params.id ?? '');
     if (!Number.isInteger(id) || id < 0) {
-        throw new HttpError(400, 'Invalid todo id!');
+        // 40002 = invalid_id；status 由调用方定，code 属业务层并映射 i18n key
+        throw new HttpError({ status: 400, code: 40002 });
     }
     return id;
 }
@@ -38,13 +39,13 @@ export function createTodo(req: Request, res: Response): void {
     const text = String(ctx.body?.text ?? '').trim();
     if (!text) {
         // 非法入参：空文本，直接拦截，不进入 service
-        throw new HttpError(400, 'The to-do item cannot be empty!');
+        throw new HttpError({ status: 400, code: 40001 }); // 40001 todo_empty
     }
 
     const newItem = todoService.createTodo({ text });
     if (!newItem) {
         // 入参已清洗且非空，此处仍失败 = 服务端故障（持久化/底层异常）→ 500
-        throw new HttpError(500, 'Failed to create todo!');
+        throw new HttpError({ status: 500, code: 50001 }); // 50001 create_failed
     }
 
     // 空 → 第一条：原来是空列表占位，必须整体替换才能去掉“暂无待办”
@@ -66,7 +67,7 @@ export function toggleTodo(req: Request, res: Response): void {
 
     const item = todoService.toggleTodo(id);
     if (!item) {
-        throw new HttpError(404, 'Todo Not Found!'); // id 合法但库里没有 → 404
+        throw new HttpError({ status: 404, code: 40401 }); // 40401 toggle_not_found，待切换的待办不存在
     }
     ctx.render('partials/item', item);
 }
@@ -77,9 +78,11 @@ export function removeTodo(req: Request, res: Response): void {
 
     const id = parseValidId(ctx);
 
-    const removed = todoService.removeTodo(id);
-    if (!removed) {
-        throw new HttpError(404, 'Todo Not Found!');
+    // 校验 id 合法后删除；service 已把 status/code 拼进结果，controller 直接透传给 HttpError
+    const result = todoService.removeTodo(id);
+    if (!result.success) {
+        const _defaultStatus = 500;
+        throw new HttpError({ status: result.status ?? _defaultStatus, code: result.code ?? _defaultStatus });
     }
 
     if (todoService.countTodos() === 0) {

@@ -6,10 +6,14 @@ import { createApp } from './app.js';
 import { mountRoutes } from './routes.js';
 import { clientDistDir } from './paths.js';
 import { registerShutdown } from './runtime/shutdownRuntime.js';
+import { installProcessErrorGuard } from './runtime/processErrors.js';
 import { listenWithRetry } from './utils/listenWithRetry.js';
 
 const isProd = process.env.NODE_ENV === 'production';
 const port = Number(process.env.PORT) || 3006;
+
+// 进程级兜底：接管 unhandledRejection / uncaughtException，须在任何异步逻辑之前注册
+installProcessErrorGuard();
 
 async function main(): Promise<void> {
     const app = await createApp();

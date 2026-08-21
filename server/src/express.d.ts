@@ -21,6 +21,8 @@ declare global {
             isHistoryRestore: boolean;
             /** 衍生标记：有效的 htmx 片段请求，排除历史恢复回退场景 */
             isFragment: boolean;
+            /** 当前请求唯一标识（requestId 中间件生成，回写 X-Request-Id） */
+            id: string;
         }
 
         interface Response {

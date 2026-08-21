@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { logger } from '../utils/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -36,7 +37,7 @@ function loadTodos(): TodosData {
         const raw = readFileSync(DATA_FILE, 'utf-8');
         return JSON.parse(raw) as TodosData;
     } catch (err) {
-        console.error('读取数据文件失败，使用空数据启动:', err);
+        logger.error('读取数据文件失败，使用空数据启动', { error: String(err) });
         return { todos: [], nextId: 1 };
     }
 }

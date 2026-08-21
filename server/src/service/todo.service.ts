@@ -1,6 +1,7 @@
 import type { TodoItem } from '../repository/todo.repository.js';
 import type { CreateTodoDto, TodoView } from '../dto/todo.dto.js';
 import * as todoRepository from '../repository/todo.repository.js';
+import { ERROR_CODES } from '../i18n/error-codes.js';
 
 /**
  * 待办业务层（薄）：
@@ -45,7 +46,37 @@ export function toggleTodo(id: number): TodoView | undefined {
     return item ? toView(item) : undefined;
 }
 
-/** 删除待办：返回是否删除成功 */
-export function removeTodo(id: number): boolean {
-    return todoRepository.remove(id);
+/** 移除结果：success 表示删除成功；否则 code/status 由 service 拼装好，controller 直接透传给 HttpError */
+export type RemoveResult = {
+    success: boolean;
+    /** 失败时的数字业务码（40402 remove_not_found / 50002 remove_failed） */
+    code?: number;
+    /** 简要失败原因（可读说明，非判断依据） */
+    reason?: string;
+    /** 失败时的 HTTP 状态码（404 / 500） */
+    status?: number;
+};
+
+/** 删除待办：返回成功与否及失败信息（区分「不存在」与「移除失败」） */
+export function removeTodo(id: number): RemoveResult {
+    try {
+        const removed = todoRepository.remove(id);
+        if (!removed) {
+            return {
+                success: false,
+                code: ERROR_CODES.remove_not_found.code,
+                reason: 'not_found',
+                status: 404
+            };
+        }
+        return { success: true };
+    } catch {
+        // 写盘/底层失败（与「找不到 id」区分）→ 业务码 remove_failed
+        return {
+            success: false,
+            code: ERROR_CODES.remove_failed.code,
+            reason: 'remove_failed',
+            status: 500
+        };
+    }
 }

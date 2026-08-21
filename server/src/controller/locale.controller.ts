@@ -17,7 +17,8 @@ export async function changeLanguage(req: Request, res: Response): Promise<void>
     const ctx = createWebCtx(req, res);
     const lang = String(ctx.body?.lang || '');
     if (!SUPPORTED_LANGUAGES.includes(lang)) {
-        throw new HttpError(400, 'Unsupported language: ' + lang);
+        // 40003 unsupported_lang
+        throw new HttpError({ status: 400, code: 40003, params: { lang } });
     }
     ctx.cookie('lang', lang, { httpOnly: false, path: '/' });
     const i18nJson = await loadI18n(lang);
