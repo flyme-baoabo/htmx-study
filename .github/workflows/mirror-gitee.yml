@@ -2,7 +2,7 @@
 name: Sync To Gitee
 on:
   push:
-    branches: [ main, master ] #需要同步的分支
+    branches: [ main, master, develop, spa ] #需要同步的分支
 jobs:
   sync:
     runs-on: ubuntu-latest
