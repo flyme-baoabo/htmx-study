@@ -36,7 +36,7 @@ htmx-study-express-vite/
 │     │  └─ db.config.ts            # 数据库全局参数配置
 │     ├─ dto/                       # 数据传输对象
 │     ├─ routes/                    # 业务路由
-│     ├─ utils/                     # 通用工具（gracefulShutdown / listenWithRetry）
+│     ├─ utils/                     # 通用工具
 │     ├─ views/                     # 服务端视图模板层
 │     │  ├─ layouts/                #   global 布局骨架
 │     │  ├─ pages/                  #   业务页面模板
@@ -59,7 +59,7 @@ htmx-study-express-vite/
 └─ package.json
 ```
 
-> 💡 **数据库目录说明**：`server/src/db/`（含 `prisma/`、`index.ts`、`redis.ts`、`db.config.ts`）目前是**预留的基础模板骨架**，尚未接入真实数据库。当前待办数据仍走 JSON 文件存储（`server/src/storage.ts`）；上述骨架不导入任何业务代码、不进入启动链路，`typecheck` 零副作用，待后续接入 PostgreSQL / Redis 时按骨架内注释填充即可。
+> 💡 **数据库目录说明**：`server/src/db/`（含 `prisma/`、`index.ts`、`redis.ts`、`db.config.ts`）目前是**预留的基础模板骨架**，尚未接入真实数据库。当前待办数据仍走 JSON 文件存储（`repository/todo.repository.ts` 读写 `data/todos.json`）；上述骨架不导入任何业务代码、不进入启动链路，`typecheck` 零副作用，待接入 PostgreSQL / Redis 时按配置内注释填充即可。
 
 ## 启动方式（仅此一种，无需并行多进程）
 
@@ -192,9 +192,77 @@ nonExplicitSupportedLngs: true,     // 允许“纯语言码”（如 zh / en）
 - **前端**：`client/src/main.ts` / `client/src/main.css` 改动 → Vite HMR 热更新，不刷新。
 - **后端视图**：`server/src/views/*.ejs` 在开发模式（view cache 关闭）下每次请求重新读盘，保存后刷新页面即可看到变化；路由等 `.js` 改动由 `node --watch` 自动重启。
 
+## 请求链路与日志
+
+从请求进来、过程日志、到错误出口，全链路靠 **`requestId` 串联**，日志按它分组排查。
+
+### requestId 中间件（`middleware/requestId.middleware.ts）`
+
+每个请求用 `crypto.randomUUID()` 生成唯一 `req.id`，并回写 `X-Request-Id` 响应头，供前端/日志按请求追溯。需在业务路由**之前**挂载（`app.ts` 放在 body 解析之后）。
+
+### 结构化日志（`utils/logger.ts）`
+
+零依赖（不引 pino/winston）的 JSON 结构化日志——每行一个 JSON 对象 `{ ts, level, msg, ...meta }`，便于 `grep` 或按字段过滤：
+
+```ts
+import { logger } from '../utils/logger.js';
+logger.info('create todo', { requestId: req.id, title });
+logger.error('[unhandledRejection]', { name, message, stack });
+```
+
+`error` / `warn` 走 `console.error/warn`，其余走 `console.log`。若后期升级为文件/级别/轮转，只需改本文件，不影响调用方。
+
+### 进程级兜底（`runtime/processErrors.ts`）
+
+`main()` 之前调用 `installProcessErrorGuard()`（`index.ts` 顶部）：
+
+- `unhandledRejection`：异步 promise 被拒没人 catch，记日志，但不立刻退出（可能是单个请求故障，仍可恢复）。
+- `uncaughtException`：同步异常冒到顶层、进程状态可能已损坏，记日志后置 `process.exitCode = 1`，交给 `node --watch` / Docker 重启，避免带病运行产生更难排查的问题。
+
+## 控制器与 WebContext 适配层
+
+两套上下文：**传统 `req/res`**（局部片段用 `res.render('partials/…')`）与 **标准化 `WebContext`**（`adapter/webCtx.ts`）。
+
+`createWebCtx(req, res)` 把请求侧（`params/query/body/locals`）与响应侧（`status/send/json/sendHtml/render/renderPage/setHeader/cookie/end`）包装成统一上下文对象，controller 仅依赖 `WebContext` 类型而不直接摸 `req/res` 类型，未来替换 Web 框架（Hono / Fastify / Koa…）只需换 `createWebCtx` 一个实现。
+
+## 请求链路与日志
+
+从请求进来到错误出口，全链路靠 **`requestId` 串联**，日志按它分组排查。
+
+### requestId 中间件（`middleware/requestId.middleware.ts`）
+
+每个请求用 `crypto.randomUUID()` 生成唯一 `req.id`，并回写 `X-Request-Id` 响应头，供前端/日志按请求追溯。需在业务路由**之前**挂载（`app.ts` 放在 body 解析之后）。
+
+### 结构化日志（`utils/logger.ts`）
+
+零依赖（不引 pino/winston）的 JSON 结构化日志——每行一个 JSON 对象 `{ ts, level, msg, ...meta }`，便于 grep 或按字段过滤：
+
+```ts
+import { logger } from '../utils/logger.js';
+logger.info('create todo', { requestId: req.id, title });
+logger.error('[unhandledRejection]', { name, message, stack });
+```
+
+`error` / `warn` 走 `console.error/warn`，其余走 `console.log`。若后期要升级文件/级别/轮转，只需改本文件，不影响调用方。
+
+### 进程级兜底（`runtime/processErrors.ts`）
+
+`main()` 之前调用 `installProcessErrorGuard()`（`index.ts` 顶部）：
+
+- `unhandledRejection`：异步 promise 被拒没人 catch，记日志但不立刻退出（可能是单个请求故障，仍可恢复）。
+- `uncaughtException`：同步异常冒到顶层、进程状态可能已损坏，记日志后置 `process.exitCode = 1`，交给 `node --watch` / Docker 重启，避免带病运行产生更难排查的问题。
+
+## 控制器与 WebContext 适配层
+
+controller 既可用**传统 `req/res`**（局部片段 `res.render('partials/…')`），也可走**标准化 `WebContext`**（`adapter/webCtx.ts`）。
+
+`createWebCtx(req, res)` 把请求侧（`params/query/body/locals`）与响应侧（`status/send/json/sendHtml/render/renderPage/setHeader/cookie/end`）包装成统一上下文对象，controller 只依赖 `WebContext` 类型而不直接摸 `req/res`，将来替换 Web 框架（Hono / Fastify / Koa…）只需换 `createWebCtx` 一个实现。
+
 ## 统一错误处理
 
-**业务错误只在 controller 层 `throw new HttpError(status, message)`**，由全局中间件统一映射成响应；service / repository 只返回可空结果（`null` / `undefined` / `boolean`），middleware 只发响应，均不抛 HTTP 错误。
+**业务错误只在 controller 层 `throw new HttpError({ status, code })`**，由全局中间件统一映射成响应；service / repository 只返回可空结果（`null` / `undefined` / `boolean`），middleware 只发响应，均不抛 HTTP 错误。
+
+错误码集中在 `i18n/error-codes.ts` 的 `ERROR_CODES` 单一词典：`HttpError` 构造时按 `code` 反查得到 `message`（i18n key）与 `status`，格式 `xxyyy`（3 位 HTTP 状态 + 2 位序号，如 `40001`）。controller 只需 `new HttpError({ status, code })`，无需自带文案。
 
 controller 若为 **async**，路由须用 `asyncHandler` 包裹：async 抛错会变成 rejected Promise，Express 捕获不到；`asyncHandler` 用 `.catch(next)` 把错误转进错误管道。async handler 里**任何** `throw`（含 `HttpError`、`await` 失败、`render`/`renderPage` 内部异常）都由它兜转，无需为渲染单独处理。同步路由的渲染错误则走 Express 原生 `next(err)` 链路，不需要 asyncHandler。`asyncHandler` 是路由装配工具，放在 `utils/`（不在 error.middleware），属于错误发生前的上游转运。
 

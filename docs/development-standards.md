@@ -198,9 +198,11 @@ app.use(renderPageMiddleware);            // ④ 后挂 res.renderPage
 
 ---
 
-## 8. 统一错误处理（global HttpError）⚠️
+## 8. 统一错误处理（global HttpError + 错误码词典）⚠️
 
-**铁律：业务错误只在 controller 层 `throw new HttpError(status, message)`，其他层一律不得抛 HTTP 错误。**
+**铁律：业务错误只在 controller 层 `throw new HttpError({ status, code })`，其他层一律不得抛 HTTP 错误。**
+
+错误码走**单一事实来源** —— `server/src/i18n/error-codes.ts` 的 `ERROR_CODES` 词典（格式 `xxyyy`：3 位 HTTP 状态 + 2 位序号，如 `40001`）。`HttpError` 构造时按 `code` 从词典反查 `message`（i18n key）与 `status`，因此 controller 通常只需 `new HttpError({ status: 400, code: 40001 })`，无需自带文案；也可 `{ status, message }` 传 i18n key 或自由文案兜底。
 
 由全局 `errorHandler` 中间件统一映射成响应，业务/路由代码**不手写** `res.status(…).send(…)` 去补错误响应。
 
@@ -208,9 +210,9 @@ app.use(renderPageMiddleware);            // ④ 后挂 res.renderPage
 
 | 场景 | 做法 |
 |---|---|
-| 非法入参（空文本 / 非法 id） | `throw new HttpError(400, '...')` |
-| 资源不存在（id 合法但库里没有） | `throw new HttpError(404, '...')` |
-| 服务端故障（入参已清洗却仍失败） | `throw new HttpError(500, '...')` |
+| 非法入参（空文本 / 非法 id） | `throw new HttpError({ status: 400, code: 40001 })` |
+| 资源不存在（id 合法但库里没有） | `throw new HttpError({ status: 404, code: 40401 })` |
+| 服务端故障（入参已清洗却仍失败） | `throw new HttpError({ status: 500, code: 50001 })` |
 
 - **service / repository**：只返回「可空」结果（`null` / `undefined` / `boolean`），把语义交给上层，**不抛 HttpError**（见 `todo.service.ts` 的 `toView` 与 controller 对 status 的决定）。
 - **middleware**：只发送响应（`errorHandler` / `notFoundHandler`），不抛 HttpError。
@@ -228,8 +230,8 @@ app.use(renderPageMiddleware);            // ④ 后挂 res.renderPage
 
 | 导出 | 职责 |
 |---|---|
-| `HttpError` | 业务错误类，`{ status, message }` |
-| `errorHandler(err,…)` | 唯一错误出口：`err instanceof HttpError` → 按 `err.status` 发响应；未知异常 → 记日志 + `500` |
+| `HttpError` | 业务错误类，`{ status, code?, message?, params? }`；按 `code` 反查错误的码词典或直接用 `message` |
+| `errorHandler(err,…)` | 唯一错误出口：`err instanceof HttpError` → 按 `err.status` 发响应；未知异常 → `logger.error` 记日志 + `500` |
 | `notFoundHandler(req,res)` | 路由**未命中**时的 `404` 兜底 |
 
 **`notFoundHandler` vs `errorHandler` 的 404 区别**：
@@ -251,3 +253,70 @@ app.use(errorHandler);     // 必须最后，4 参签名才被 Express 识别
 ```
 
 因为 `index.ts` 的装配顺序是 `createApp()`（所有中间件先挂）→ 前端 Vite/static → **`mountRoutes(app)`（放最后）**，所以 `mountRoutes` 内的 `notFound` / `error` 就是整条请求管道的**末尾兜底**。
+
+---
+
+## 9. 请求链路与结构化日志（requestId + logger）⚡
+
+每个请求从进来到响应都由一个 `requestId` 串联，配合 `logger` 记录，方便日志里按请求分组、按一次请求串连所有关键节点。
+
+### 9.1 `requestId` 中间件（`middleware/requestId.middleware.ts`）
+
+```ts
+export function requestId(req, res, next) {
+    const id = randomUUID();
+    req.id = id;
+    res.setHeader('X-Request-Id', id);
+    next();
+}
+```
+
+- 给每次请求生成 `crypto.randomUUID()`，写入 `req.id`，并回写 `X-Request-Id` 响应头。
+- **挂载位**：`app.ts` 中放在 body 解析之后、业务中间件之前，让后续每个中间件/controller 都能拿到 `req.id`。
+- **消费方式**：日志统一带 `{ requestId: req.id }`，据此把一次请求的所有日志串起来。
+
+### 9.2 `logger`（`utils/logger.ts`）
+
+零依赖的 JSON 结构化日志：**每行一个 JSON 对象** `{ ts, level, msg, ...meta }`，便于按字段 grep。
+
+```ts
+logger.info('create todo', { requestId: req.id, title });
+logger.warn('...');  logger.error('...');   // warn/error 走 console.error/warn
+```
+
+- **为什么不用 pino/winston**：本项目日志量小，内置 console + JSON 序列化已够；要升级（文件/级别/轮转）时只需改本文件，调用方零改动。
+- 错误出口统一用它：`errorHandler` / `notFoundHandler` / `processErrors` 都经 `logger` 记录现场与 requestId。
+
+### 9.3 进程级兜底（`runtime/processErrors.ts`）
+
+`main()` 之前调用 `installProcessErrorGuard()`：
+
+| 事件 | 行为 |
+|---|---|
+| `unhandledRejection` | 异步 promise 被拒没人 catch —— 记录但不退出（单请求故障，可能可恢复） |
+| `uncaughtException` | 同步异常冒到顶层 —— 记录后 `process.exitCode=1`，交给进程管理器重拉（避免带病运行） |
+
+---
+
+## 10. Controller 与 WebContext 适配层（`adapter/webCtx.ts`）⚡
+
+目标：**把 controller 从「直接操作 req / res」解耦**，换用统一 `WebContext` 上下文对象，将来换 Web 框架（Koa / Fastify / Hono…）只需换 `createWebCtx` 实现。
+
+### 10.1 两套 controller 风格
+
+| 风格 | 适用 | 示例 |
+|---|---|---|
+| 传统 `req/res` + `res.render('partials/…')` | 局部片段（待办增删改） | `todo.controller.ts` |
+| 标准化 `WebContext`（推荐新代码） | controller 只依赖 `WebContext` 类型 | `ctx.renderPage(...)` |
+
+### 10.2 `WebContext` 接口
+
+- **请求侧**（只读入参）：`params` / `query` / `body` / `locals`
+- **响应侧**：`status` / `send` / `json` / `sendHtml` / `render` / `renderPage` / `setHeader` / set / `cookie` / `end`
+- 所有「写响应」方法返回 `this`，支持链式（如 `ctx.status(404).json(...)`）。
+
+### 10.3 适配器构造（`createWebCtx(req, res)`）
+
+内部缓存一个 `statusCode`（默认 200），由 `status()` 写入，`send/json/end` 统一消费；其余方法直接委托给 `res` 对应能力。
+
+> ⚠️ 换框架时保持接口签名不变，只有 `adapter/webCtx.ts` 内部改用目标框架的 ctx；controller 不感知差异。
