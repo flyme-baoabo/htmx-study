@@ -1,4 +1,6 @@
 import htmx from 'htmx.org';
+import { showToast, ToastVariant } from './toast';
+import { t } from './i18n';
 
 /**
  * 自定义语言切换下拉菜单。
@@ -98,9 +100,12 @@ async function switchLanguage(lang: string): Promise<void> {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as { i18nJson?: StringMap; isSuccess?: boolean };
         // 重新赋值全局文案（供后续直接用，/body 刷新会重绘 DOM 再以此为准）
-        if (data.isSuccess && data.i18nJson) window.I18n = data.i18nJson ;
+        if (data.isSuccess && data.i18nJson) {
+            window.I18n = data.i18nJson;
+        };
     } catch (e) {
         console.error('切换语言失败', e);
+        showToast(t('toast.change_language_failed'), ToastVariant.Error);
         return;               // 不继续 GET，避免 旧语言误换
     }
 
@@ -120,6 +125,9 @@ async function switchLanguage(lang: string): Promise<void> {
 
     // 4. #root 已换新 DOM，重新绑定语言菜单
     initLanguageSwitcher();
+
+    // 5. 整个切换流程完成后再弹成功 toast（此时文案用新语言，DOM 已换新）
+    showToast(t('toast.change_language_success'), ToastVariant.Success);
 }
 
 // 首次加载：绑定语言菜单。

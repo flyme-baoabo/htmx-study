@@ -25,7 +25,7 @@ export function notFoundHandler(req: Request, res: Response): void {
         res.status(404).type('text').send(message);
         return;
     }
-    res.status(404).json({ error: message });
+    res.status(404).json({ message });
 }
 
 /**
@@ -59,13 +59,12 @@ export function errorHandler(
     // 响应形态按请求类型：htmx / 浏览器导航 → 纯文本片段；fetcth 等 API（Accept 非 html）→ JSON。
     if (err instanceof HttpError) {
         const body = err.message || 'Request Error';
+        // 对 htmx / 浏览器导航返回纯文本片段，其余（fetch/API）返回 JSON；
+        // 具体如何展示/渲染由前端监听 htmx 生命周期或读响应自行处理。
         if (isHtmxRequest(req) || prefersHtml(req)) {
-            // 供 htmx 直接插入 hx-target：htmx 默认不 swap 4xx/5xx，
-            // 由客户端监听 htmx:beforeSwap 设 shouldSwap=true 后，
-            // 这团纯文本才能按 hx-swap 进到目标元素（见 client/src/handleError.ts）。
             res.status(err.status).type('text').send(body);
         } else {
-            res.status(err.status).json({ error: body });
+            res.status(err.status).json({ message: body });
         }
         return;
     }
@@ -78,7 +77,7 @@ export function errorHandler(
     if (isHtmxRequest(req) || prefersHtml(req)) {
         res.status(500).type('text').send(body);
     } else {
-        res.status(500).json({ error: body });
+        res.status(500).json({ message: body });
     }
 }
 

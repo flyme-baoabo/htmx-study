@@ -21,7 +21,8 @@
 
     <form class="mb-5 flex flex-col gap-2 sm:flex-row sm:gap-3" hx-post="/todos" hx-target="#todo-list"
         hx-swap="afterbegin" hx-on::after-request="if(event.detail.successful) this.reset()">
-        <input type="text" name="text" required data-required="<%= t('validation.required') %>"
+        <!-- <input type="text" name="text" required data-required="<%= t('validation.required') %>" -->
+        <input type="text" name="text" data-required="<%= t('validation.required') %>"
             oninvalid="this.setCustomValidity(this.dataset.requiredMsg)"
             oninput="this.setCustomValidity('')" placeholder="<%= t('todos.placeholder') %>"
             class="input sm:flex-1" />

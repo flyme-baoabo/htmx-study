@@ -1,17 +1,15 @@
 /**
- * 自定义确认弹窗 —— 通过 htmx 的 htmx:confirm 事件拦截删除请求。
+ * 确认弹窗 + htmx:confirm 拦截模块。
  *
- * 机制：
- *   - 每次带 hx-* 的请求都会在触发元素上派发 htmx:confirm 事件（冒泡到 document）。
- *   - 本模块只处理带有 data-confirm 标记的按钮（目前用于删除）。
- *   - 有标记 → preventDefault() 拦下请求，弹出自己的确认框；
- *     用户确认 → 调 e.detail.issueRequest() 放行（后端与局部刷新原样走）；
- *     用户取消 → 什么都不做，请求不发出。
- *
- * 弹窗用 Tailwind 构建，挂到 body 末尾，风格与现有卡片一致。
+ * 只负责：
+ *  - openConfirm：打开确认弹窗，resolve(true/false)
+ *  - handleConfirm：htmx:confirm 事件处理器（带 data-confirm 就弹框拦截，确认后放行请求）
+ *  - closeModal / escapeHtml：内部工具
+ * 拦截由 mountHtmxLifecycle.ts 触发注册（document 上委托监听，兼容动态渲染按钮）。
  */
 
-type ConfirmEvent = CustomEvent<{
+/** htmx:confirm 事件对象：elt 为触发元素，issueRequest 确认后放行请求 */
+export type ConfirmEvent = CustomEvent<{
     elt: HTMLElement;
     issueRequest: (skipConfirmation?: boolean) => void;
 }>;
@@ -28,7 +26,7 @@ interface ConfirmOptions {
 }
 
 /** 打开确认框，resolve(true) 表示确认，resolve(false) 表示取消 */
-function openConfirm(
+export function openConfirm(
     message: string,
     options: ConfirmOptions = {},
 ): Promise<boolean> {
@@ -111,15 +109,14 @@ function escapeHtml(str: string): string {
             ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c,
     );
 }
-
 /**
- * 拦截 htmx 请求：带 data-confirm 的操作需要确认。
- * 在 document 上委托监听，兼容 htmx 动态渲染的按钮。
+ * htmx:confirm 拦截处理器：带 data-confirm 的操作弹出确认框。
+ * 由 mountHtmxLifecycle.ts 在 document 上委托注册，兼容动态渲染的按钮。
  *
- * 注意：这个版本的 htmx 触发的事件名是 `htmx:confirm`（在触发元素 elt 上派发并冒泡到 document），
- *      不是旧版的 `htmx:confirmRequest`。用错事件名会导致监听永远不触发。
+ * 注意：该版本 htmx 派发的事件名是 `htmx:confirm`（在 elt 上派发并冒泡到 document），
+ *      不是旧版的 `htmx:confirmRequest`，用错事件名会导致监听永不触发。
  */
-document.addEventListener('htmx:confirm', (e) => {
+export function handleConfirm(e: Event): void {
     const evt = e as ConfirmEvent;
     const elt = evt.detail.elt;
     const getAttr = (name: string) =>
@@ -142,4 +139,4 @@ document.addEventListener('htmx:confirm', (e) => {
     }).then((ok) => {
         if (ok) evt.detail.issueRequest();
     });
-});
+}
