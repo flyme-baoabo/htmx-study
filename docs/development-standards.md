@@ -235,7 +235,7 @@ app.use(renderPageMiddleware);            // ④ 后挂 res.renderPage
 | `notFoundHandler(req,res)` | 路由**未命中**时的 `404` 兜底 |
 
 **`notFoundHandler` vs `errorHandler` 的 404 区别**：
-- `throw new HttpError(404, …)` **必走 `errorHandler`**（业务「资源不存在」）；不会落到 `notFoundHandler`。
+- `throw new HttpError({ status: 404, code: 40401 })` **必走 `errorHandler`**（业务「资源不存在」）；不会落到 `notFoundHandler`。
 - 只有「没有任何路由匹配」的请求才到 `notFoundHandler`。
 
 **响应形态**：htmx / 浏览器导航（`Accept: text/html`）→ 纯文本片段；其余 API（fetch，`Accept` 非 html）→ `JSON { error }`。客户端由 `client/src/handleError.ts` 在 `beforeSwap` 设 `shouldSwap = true`，把 4xx/5xx 错误体按 `hx-swap` 就地替换 `hx-target`。

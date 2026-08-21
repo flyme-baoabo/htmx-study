@@ -20,13 +20,14 @@
 ## 目录结构
 
 ```
-htmx-study-express-vite/
+project-root/                       # 当前仓库根目录（占位名，取决于 clone 目录名）
 ├─ server/                          # Node 后端业务
 │  └─ src/
 │     ├─ adapter/                   # 基础设施适配层（把外部能力接入业务）
 │     ├─ controller/                # HTTP 控制器
 │     ├─ service/                   # 业务服务层
-│     ├─ repository/                # 纯业务数据 CRUD 封装，无 Prisma 底层基建
+│     ├─ repository/                # 纯业务数据 CRUD 封装（本地 JSON 文件读写）
+│     │  └─ todo.repository.ts      #   待办数据读 / 写 / 查，暂用 data/todos.json，无 Prisma 底层基建
 │     ├─ db/                        # 后端数据库底层基建目录
 │     │  ├─ prisma/                 # Prisma 专属目录
 │     │  │  ├─ schema.prisma        #   数据表模型、关联关系、数据库数据源配置
@@ -191,39 +192,6 @@ nonExplicitSupportedLngs: true,     // 允许“纯语言码”（如 zh / en）
 
 - **前端**：`client/src/main.ts` / `client/src/main.css` 改动 → Vite HMR 热更新，不刷新。
 - **后端视图**：`server/src/views/*.ejs` 在开发模式（view cache 关闭）下每次请求重新读盘，保存后刷新页面即可看到变化；路由等 `.js` 改动由 `node --watch` 自动重启。
-
-## 请求链路与日志
-
-从请求进来、过程日志、到错误出口，全链路靠 **`requestId` 串联**，日志按它分组排查。
-
-### requestId 中间件（`middleware/requestId.middleware.ts）`
-
-每个请求用 `crypto.randomUUID()` 生成唯一 `req.id`，并回写 `X-Request-Id` 响应头，供前端/日志按请求追溯。需在业务路由**之前**挂载（`app.ts` 放在 body 解析之后）。
-
-### 结构化日志（`utils/logger.ts）`
-
-零依赖（不引 pino/winston）的 JSON 结构化日志——每行一个 JSON 对象 `{ ts, level, msg, ...meta }`，便于 `grep` 或按字段过滤：
-
-```ts
-import { logger } from '../utils/logger.js';
-logger.info('create todo', { requestId: req.id, title });
-logger.error('[unhandledRejection]', { name, message, stack });
-```
-
-`error` / `warn` 走 `console.error/warn`，其余走 `console.log`。若后期升级为文件/级别/轮转，只需改本文件，不影响调用方。
-
-### 进程级兜底（`runtime/processErrors.ts`）
-
-`main()` 之前调用 `installProcessErrorGuard()`（`index.ts` 顶部）：
-
-- `unhandledRejection`：异步 promise 被拒没人 catch，记日志，但不立刻退出（可能是单个请求故障，仍可恢复）。
-- `uncaughtException`：同步异常冒到顶层、进程状态可能已损坏，记日志后置 `process.exitCode = 1`，交给 `node --watch` / Docker 重启，避免带病运行产生更难排查的问题。
-
-## 控制器与 WebContext 适配层
-
-两套上下文：**传统 `req/res`**（局部片段用 `res.render('partials/…')`）与 **标准化 `WebContext`**（`adapter/webCtx.ts`）。
-
-`createWebCtx(req, res)` 把请求侧（`params/query/body/locals`）与响应侧（`status/send/json/sendHtml/render/renderPage/setHeader/cookie/end`）包装成统一上下文对象，controller 仅依赖 `WebContext` 类型而不直接摸 `req/res` 类型，未来替换 Web 框架（Hono / Fastify / Koa…）只需换 `createWebCtx` 一个实现。
 
 ## 请求链路与日志
 
